@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Wifi, Camera, Cpu, Zap, Snowflake, Satellite, Wrench, MapPin, Plug } from "lucide-react";
+import { Wifi, Camera, Cpu, Zap, Snowflake, Satellite, Wrench, MapPin, Plug, Award, Gift, ShieldCheck, Clock, ArrowRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 const reveal = {
@@ -42,7 +42,8 @@ export default function Home() {
   return (
     <>
       {/* ===== HERO ===== */}
-      <section className="mx-auto max-w-6xl px-4 pb-16 pt-12 sm:px-6 sm:pt-16 lg:px-8 lg:pt-20">
+      <section className="bg-gradient-to-b from-canvas-muted to-canvas">
+        <div className="mx-auto max-w-6xl px-4 pb-16 pt-12 sm:px-6 sm:pt-16 lg:px-8 lg:pt-20">
         <div className="flex items-center justify-between gap-8">
           <div>
             <motion.div
@@ -94,19 +95,34 @@ export default function Home() {
                 ดูสินค้า
               </Link>
             </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="mt-6 flex flex-wrap gap-2"
+            >
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-white px-3 py-1.5 text-xs font-bold shadow-sm sm:text-sm">
+                <Award className="size-4 text-primary" strokeWidth={2} /> 10+ ปี
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-white px-3 py-1.5 text-xs font-bold shadow-sm sm:text-sm">
+                <Gift className="size-4 text-primary" strokeWidth={2} /> ฟรีประเมิน
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-white px-3 py-1.5 text-xs font-bold shadow-sm sm:text-sm">
+                <ShieldCheck className="size-4 text-primary" strokeWidth={2} /> รับประกันงาน
+              </span>
+            </motion.div>
           </div>
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            animate={{ opacity: 1, scale: 1, y: [0, -8, 0] }}
+            transition={{ opacity: { duration: 0.6, delay: 0.2 }, scale: { duration: 0.6, delay: 0.2 }, y: { duration: 4, repeat: Infinity, ease: "easeInOut" } }}
             className="hidden shrink-0 lg:block"
           >
             <Image src="/Logo.png" alt="C.Electronics" width={280} height={280} priority />
           </motion.div>
         </div>
+        </div>
       </section>
-
-      {/* ===== SERVICES ===== */}
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
         <motion.div {...reveal}>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary sm:text-sm">
@@ -144,7 +160,10 @@ export default function Home() {
                   </div>
                 )}
                 <div className="p-5 sm:p-6">
-                  <h3 className="text-lg font-bold tracking-tight">{s.title}</h3>
+                  <div className="flex items-start justify-between">
+                    <h3 className="text-lg font-bold tracking-tight">{s.title}</h3>
+                    <span className="text-xs font-bold tabular-nums text-subtle">{String(i + 1).padStart(2, "0")}</span>
+                  </div>
                   <p className="mt-1.5 text-sm text-muted">{s.desc}</p>
                   <p className="mt-3 text-sm font-semibold text-primary">{s.price}</p>
                 </div>
@@ -195,9 +214,10 @@ export default function Home() {
           <div className="mt-8 text-center">
             <Link
               href="/products"
-              className="inline-block whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+              className="group inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
             >
-              ดูสินค้าทั้งหมด →
+              ดูสินค้าทั้งหมด
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
         </div>
@@ -224,6 +244,9 @@ export default function Home() {
           >
             จองบริการ →
           </Link>
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-white/50">
+            <Clock className="size-3.5" /> ตอบกลับภายใน 24 ชั่วโมง
+          </p>
         </motion.div>
       </section>
     </>

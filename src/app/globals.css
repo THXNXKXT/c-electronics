@@ -1,7 +1,18 @@
 @import "tailwindcss";
 
+/* Self-hosted Sukhumvit Set WOFF2 — 163KB total, all devices see same font */
+@font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-Thin.woff2") format("woff2"); font-weight: 100; font-display: swap; }
+@font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-Light.woff2") format("woff2"); font-weight: 300; font-display: swap; }
+@font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-Text.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-SemiBold.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
 /* Hallmark · macrostructure: Marquee Hero · theme: Wise-blue · tone: utilitarian */
 @theme {
+  /* Layout */
+  --section-gap: clamp(3rem, 6vw, 6rem);
+
   /* Brand */
   --color-primary: #3871c1;
   --color-primary-hover: #2d5da0;
@@ -13,10 +24,10 @@
   --color-canvas-muted: #F2F5FA;
   --color-surface-tint: #EEF2F9;
 
-  /* Text */
+  /* Text — darkened for Thai readability */
   --color-ink: #0A0B0D;
-  --color-muted: #6C7278;
-  --color-subtle: #9BA1AB;
+  --color-muted: #525860;
+  --color-subtle: #787E88;
 
   /* Semantic */
   --color-positive: #0E9F6E;
@@ -37,15 +48,41 @@
   --dur-med: 300ms;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px; /* offset sticky nav for anchor jumps */
+}
+
 html, body {
   overflow-x: clip; /* Hallmark gate 34 — never hidden */
+}
+
+::selection {
+  background: var(--color-primary-tint);
+  color: var(--color-primary-active);
+}
+
+/* Thin scrollbar, primary thumb, transparent track */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: 9999px;
 }
 
 body {
   background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  font-weight: 500; /* Sukhumvit Text is thin — bump to Medium for normal body */
+  line-height: 1.65; /* Thai needs more air — tone marks + vowels stack */
+  letter-spacing: 0.005em; /* slight breathing room prevents vowel crowding */
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /* Hallmark: focus-visible ring — instant, never animated */
@@ -58,4 +95,14 @@ body {
 /* Surface contrast = elevation (Wise pattern) */
 .card-elevated {
   background: var(--color-canvas);
+}
+
+/* Respect users who want less motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

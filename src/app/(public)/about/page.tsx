@@ -1,4 +1,5 @@
-import { Wrench, ShieldCheck, MapPin, Users } from "lucide-react";
+import { Wrench, ShieldCheck, MapPin, Users, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 const stats = [
   { icon: Users, label: "ประสบการณ์", value: "10+ ปี" },
@@ -32,7 +33,7 @@ export default function AboutPage() {
           {stats.map((s) => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className="rounded-[20px] border border-black/5 bg-white p-5 text-center sm:p-6">
+              <div key={s.label} className="rounded-[20px] border border-black/5 bg-white p-5 text-center transition-[transform,box-shadow] duration-150 hover:-translate-y-1 hover:shadow-md sm:p-6">
                 <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary-tint">
                   <Icon className="size-6 text-primary" strokeWidth={1.5} />
                 </div>
@@ -76,6 +77,19 @@ export default function AboutPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center justify-between gap-6 rounded-[32px] bg-ink px-6 py-12 text-center sm:px-10 lg:flex-row lg:text-left">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-white">พร้อมใช้บริการของเราหรือยัง?</h2>
+            <p className="mt-2 text-sm text-white/60">จองบริการวันนี้ — ฟรีประเมิน ตอบกลับภายใน 24 ชั่วโมง</p>
+          </div>
+          <Link href="/booking" className="group flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-primary px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover">
+            จองบริการ <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+          </Link>
         </div>
       </section>
     </>
