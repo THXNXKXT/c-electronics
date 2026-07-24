@@ -25,6 +25,7 @@ export function Nav() {
           <Image src="/Logo.png" alt="C.Electronics" width={36} height={36} className="rounded-lg" priority />
           <span className="text-lg font-extrabold tracking-tight sm:text-xl">
             C.<span className="text-primary">Electronics</span>
+            <span className="ml-1.5 hidden text-xs font-semibold text-muted sm:inline">ช.อิเล็กทรอนิกส์</span>
           </span>
         </Link>
 

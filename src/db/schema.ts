@@ -55,8 +55,13 @@ export const products = pgTable("products", {
   slug: text("slug").notNull().unique(),
   category: text("category").notNull(),
   price: integer("price").notNull(),
+  compareAtPrice: integer("compare_at_price"),
   stock: boolean("stock").notNull().default(true),
+  archived: boolean("archived").notNull().default(false),
   description: text("description"),
+  image: text("image"), // cover image URL
+  publicId: text("public_id"), // Cloudinary public_id for cover (for delete)
+  images: text("images"), // gallery: comma-separated URLs
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

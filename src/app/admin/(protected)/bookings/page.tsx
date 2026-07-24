@@ -1,13 +1,13 @@
 import { db } from "@/db";
 import { bookings } from "@/db/schema";
 import { updateBookingStatus } from "../../actions";
-import { ClipboardList, Phone, MapPin, Calendar } from "lucide-react";
+import { ClipboardList, Phone, MapPin, Calendar, Clock, FileText, Home } from "lucide-react";
 
-const statusColors: Record<string, string> = {
-  pending: "bg-amber-50 text-warning",
-  contacted: "bg-blue-50 text-primary",
-  scheduled: "bg-violet-50 text-violet-600",
-  done: "bg-emerald-50 text-positive",
+const statusStyles: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700",
+  contacted: "bg-blue-100 text-blue-700",
+  scheduled: "bg-violet-100 text-violet-700",
+  done: "bg-emerald-100 text-emerald-700",
 };
 
 const statusLabels: Record<string, string> = {
@@ -37,59 +37,77 @@ export default async function AdminBookingsPage() {
       ) : (
         <div className="space-y-4">
           {allBookings.map((b) => (
-            <div key={b.id} className="rounded-[20px] border border-black/5 bg-white p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-bold">{b.customerName}</h3>
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColors[b.status] || statusColors.pending}`}>
-                      {statusLabels[b.status] || b.status}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-sm font-medium text-primary">{b.serviceType}</p>
+            <div key={b.id} className="overflow-hidden rounded-[20px] border border-black/5 bg-white">
+              {/* Header row — name + status + date */}
+              <div className="flex items-center justify-between gap-3 border-b border-black/5 px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <h3 className="font-bold">{b.customerName}</h3>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusStyles[b.status] || statusStyles.pending}`}>
+                    {statusLabels[b.status] || b.status}
+                  </span>
                 </div>
-                <span className="text-xs text-subtle">{new Date(b.createdAt).toLocaleDateString("th-TH")}</span>
-              </div>
-
-              <div className="mt-3 grid gap-2 text-sm text-muted sm:grid-cols-3">
-                <span className="flex items-center gap-2">
-                  <Phone className="size-3.5 shrink-0 text-subtle" /> {b.phone}
+                <span className="flex shrink-0 items-center gap-1 text-xs text-subtle">
+                  <Clock className="size-3" /> {new Date(b.createdAt).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}
                 </span>
-                {b.district && (
-                  <span className="flex items-center gap-2">
-                    <MapPin className="size-3.5 shrink-0 text-subtle" /> {b.district}
-                  </span>
-                )}
-                {b.preferredDate && (
-                  <span className="flex items-center gap-2">
-                    <Calendar className="size-3.5 shrink-0 text-subtle" /> {b.preferredDate}
-                  </span>
+              </div>
+
+              {/* Body — structured info grid */}
+              <div className="px-5 py-4">
+                {/* Service type — prominent */}
+                <p className="mb-3 inline-flex items-center gap-1.5 rounded-lg bg-primary-tint px-3 py-1.5 text-sm font-bold text-primary">
+                  {b.serviceType}
+                </p>
+
+                {/* Info grid — 2 cols */}
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  <a href={`tel:${b.phone}`} className="flex items-center gap-2 text-sm text-muted transition-colors hover:text-primary">
+                    <Phone className="size-4 shrink-0 text-subtle" /> {b.phone}
+                  </a>
+                  {b.district && (
+                    <span className="flex items-center gap-2 text-sm text-muted">
+                      <MapPin className="size-4 shrink-0 text-subtle" /> {b.district}
+                    </span>
+                  )}
+                  {b.preferredDate && (
+                    <span className="flex items-center gap-2 text-sm text-muted">
+                      <Calendar className="size-4 shrink-0 text-subtle" /> {b.preferredDate}
+                    </span>
+                  )}
+                  {b.address && (
+                    <span className="flex items-center gap-2 text-sm text-muted">
+                      <Home className="size-4 shrink-0 text-subtle" /> {b.address}
+                    </span>
+                  )}
+                </div>
+
+                {/* Description */}
+                {b.description && (
+                  <div className="mt-3 flex gap-2 rounded-lg bg-canvas-muted px-3 py-2.5">
+                    <FileText className="size-4 shrink-0 text-subtle" />
+                    <p className="text-sm text-muted">{b.description}</p>
+                  </div>
                 )}
               </div>
 
-              {b.description && (
-                <p className="mt-2 rounded-lg bg-canvas-muted px-3 py-2 text-sm text-muted">{b.description}</p>
-              )}
-              {b.address && <p className="mt-2 text-sm text-muted">ที่อยู่: {b.address}</p>}
-
-              {/* Status changer */}
-              <form action={updateBookingStatus.bind(null, b.id)} className="mt-3 flex flex-wrap gap-2">
+              {/* Footer — status changer */}
+              <div className="flex flex-wrap gap-1.5 border-t border-black/5 px-5 py-3">
                 {allStatuses.map((s) => (
-                  <button
-                    key={s}
-                    type="submit"
-                    name="status"
-                    value={s}
-                    className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      b.status === s
-                        ? "bg-primary text-white"
-                        : "bg-canvas-muted text-muted hover:text-ink"
-                    }`}
-                  >
-                    {statusLabels[s]}
-                  </button>
+                  <form key={s} action={updateBookingStatus.bind(null, b.id)}>
+                    <button
+                      type="submit"
+                      name="status"
+                      value={s}
+                      className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        b.status === s
+                          ? "bg-primary text-white"
+                          : "bg-canvas-muted text-muted hover:bg-black/5 hover:text-ink"
+                      }`}
+                    >
+                      {statusLabels[s]}
+                    </button>
+                  </form>
                 ))}
-              </form>
+              </div>
             </div>
           ))}
         </div>

@@ -39,7 +39,7 @@ export default function AdminLoginPage() {
             <Lock className="size-7 text-primary" strokeWidth={1.5} />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">เข้าสู่ระบบ</h1>
-          <p className="mt-1 text-sm text-muted">C.Electronics Admin</p>
+          <p className="mt-1 text-sm text-muted">C.Electronics · ช.อิเล็กทรอนิกส์</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded-[20px] border border-black/5 bg-white p-6">

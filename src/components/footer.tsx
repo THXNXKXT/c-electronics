@@ -27,9 +27,10 @@ export function Footer() {
           <div className="sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2">
               <Image src="/Logo.png" alt="C.Electronics" width={40} height={40} className="rounded-lg" />
-              <span className="text-xl font-extrabold tracking-tight">
+              <span className="text-lg font-extrabold tracking-tight">
                 C.<span className="text-primary">Electronics</span>
               </span>
+              <p className="text-xs font-semibold text-muted">ช.อิเล็กทรอนิกส์</p>
             </div>
             <p className="mt-1 text-sm font-medium text-muted">อะไหล่อิเล็กทรอนิกส์ & ติดตั้งมืออาชีพ</p>
             <p className="mt-3 max-w-xs text-sm text-muted">
@@ -83,7 +84,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 border-t border-black/5 pt-6 text-xs text-subtle">
-          © 2025 C.Electronics — จังหวัดเชียงราย
+          © 2025 C.Electronics · ช.อิเล็กทรอนิกส์ — จังหวัดเชียงราย
         </div>
       </div>
     </footer>

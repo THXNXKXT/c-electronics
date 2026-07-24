@@ -6,7 +6,7 @@ const SITE_URL = "https://celectronics.com"; // ponytail: update when domain is 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "C.Electronics — อะไหล่อิเล็กทรอนิกส์และรับติดตั้ง เชียงราย",
+    default: "C.Electronics (ช.อิเล็กทรอนิกส์) — อะไหล่อิเล็กทรอนิกส์และรับติดตั้ง เชียงราย",
     template: "%s — C.Electronics เชียงราย",
   },
   description:
