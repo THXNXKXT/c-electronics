@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Package, ClipboardList, Wrench, LogOut, ExternalLink } from "lucide-react";
+import { Package, ClipboardList, LogOut, ExternalLink, Phone, Wrench } from "lucide-react";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -12,6 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: "สินค้า", href: "/admin/products", icon: Package },
     { label: "บริการ", href: "/admin/services", icon: Wrench },
     { label: "การจอง", href: "/admin/bookings", icon: ClipboardList },
+  { label: "ติดต่อ", href: "/admin/contact", icon: Phone },
   ];
 
   return (

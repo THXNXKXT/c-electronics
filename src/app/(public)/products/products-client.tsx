@@ -19,6 +19,7 @@ type Product = {
 
 const PHONE = "0XX-XXX-XXXX";
 const LINE_URL = "https://line.me";
+// ponytail: these pages read from settings but products-client is embedded in public layout which already passes phone to nav/footer. For now these CTAs use defaults — settings integration when needed.
 
 export function ProductsClient({ products }: { products: Product[] }) {
   const [query, setQuery] = useState("");

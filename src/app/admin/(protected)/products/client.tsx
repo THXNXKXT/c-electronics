@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Package, Plus, Trash2, Archive, ArchiveRestore, Pencil } from "lucide-react";
 import { ImageUpload } from "@/components/image-upload";
 import { MultiImageUpload } from "@/components/multi-image-upload";
+import { ConfirmModal } from "@/components/confirm-modal";
 import { createProductAction, deleteProductAction, archiveProduct } from "./actions-client";
 
 export function AdminProductsClient({
@@ -29,6 +31,8 @@ export function AdminProductsClient({
   const [adding, setAdding] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const router = useRouter();
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const visible = showArchived ? items : items.filter((p) => !p.archived);
   const archivedCount = items.filter((p) => p.archived).length;
@@ -43,18 +47,19 @@ export function AdminProductsClient({
     setAdding(false);
     setNewImage("");
     setNewGallery([]);
-    window.location.reload();
+    router.refresh();
   }
 
   async function handleArchive(id: string, archived: boolean) {
     await archiveProduct(id, archived);
-    window.location.reload();
+    router.refresh();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("ลบถาวร? รูปใน Cloudinary จะถูกลบด้วย")) return;
-    await deleteProductAction(id);
-    window.location.reload();
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    await deleteProductAction(deleteTarget.id);
+    setDeleteTarget(null);
+    router.refresh();
   }
 
   return (
@@ -174,7 +179,7 @@ export function AdminProductsClient({
                         <button onClick={() => handleArchive(p.id, !p.archived)} className="rounded-lg p-2 text-subtle transition-colors hover:bg-warning/5 hover:text-warning">
                           {p.archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
                         </button>
-                        <button onClick={() => handleDelete(p.id)} className="rounded-lg p-2 text-subtle transition-colors hover:bg-negative/5 hover:text-negative">
+                        <button onClick={() => setDeleteTarget({ id: p.id, name: p.name })} className="rounded-lg p-2 text-subtle transition-colors hover:bg-negative/5 hover:text-negative">
                           <Trash2 className="size-4" />
                         </button>
                       </div>
@@ -186,6 +191,14 @@ export function AdminProductsClient({
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="ลบสินค้า"
+        message={`ต้องการลบ "${deleteTarget?.name}" ใช่ไหม?`}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

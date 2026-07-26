@@ -63,7 +63,7 @@ export const products = pgTable("products", {
   publicId: text("public_id"), // Cloudinary public_id for cover (for delete)
   images: text("images"), // gallery: comma-separated URLs
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const services = pgTable("services", {
@@ -74,15 +74,30 @@ export const services = pgTable("services", {
   price: text("price"),
   icon: text("icon").notNull().default("Wrench"),
   image: text("image"),
-  features: text("features"), // ponytail: comma-separated, json is overkill for 4 items
+  features: text("features"),
+  archived: boolean("archived").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+// ponytail: single-row settings table — contact info editable from admin
+export const settings = pgTable("settings", {
+  id: text("id").primaryKey().$defaultFn(() => "singleton"),
+  phone: text("phone"),
+  line: text("line"),
+  email: text("email"),
+  address: text("address"),
+  mondayFriday: text("monday_friday"),
+  saturday: text("saturday"),
+  sunday: text("sunday"),
+  mapsEmbed: text("maps_embed"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const bookings = pgTable("bookings", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  ref: text("ref"), // ponytail: booking reference number, generated server-side
   serviceType: text("service_type").notNull(),
-  customerName: text("customer_name").notNull(),
   phone: text("phone").notNull(),
   district: text("district"),
   address: text("address"),

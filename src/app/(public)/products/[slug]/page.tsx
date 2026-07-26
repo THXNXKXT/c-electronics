@@ -4,11 +4,10 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { ChevronRight, PhoneCall, MessageCircle, Check, X } from "lucide-react";
 import { db } from "@/db";
-import { products } from "@/db/schema";
+import { products, settings } from "@/db/schema";
 import { Gallery } from "./gallery";
 
-const PHONE = "0XX-XXX-XXXX";
-const LINE_URL = "https://line.me";
+// ponytail: falls back to defaults if settings not configured
 
 export async function generateMetadata({
   params,
@@ -41,6 +40,10 @@ export default async function ProductDetail({
 
   // 404 if missing or archived
   if (!product || product.archived) notFound();
+
+  const [s] = await db.select().from(settings).limit(1);
+  const phone = s?.phone || "0XX-XXX-XXXX";
+  const line = s?.line || "@celectronics";
 
   // cover first, then gallery entries (schema stores gallery as comma-sep URLs)
   const gallery = product.images
@@ -126,13 +129,13 @@ export default async function ProductDetail({
           {/* Inquire CTAs — catalog only, no add-to-cart */}
           <div className="mt-8 flex flex-wrap gap-3">
             <a
-              href={`tel:${PHONE}`}
+              href={`tel:${phone}`}
               className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
             >
               <PhoneCall className="size-4" /> โทรสอบถาม
             </a>
             <a
-              href={LINE_URL}
+              href={`https://line.me/${line}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 rounded-full border border-black/10 bg-white px-6 py-3 text-sm font-semibold text-ink transition-colors hover:border-primary"

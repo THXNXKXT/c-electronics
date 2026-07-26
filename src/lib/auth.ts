@@ -23,4 +23,13 @@ export const auth = betterAuth({
   },
 });
 
+import { headers } from "next/headers";
+
+// ponytail: one guard, called first line of every mutating action
+export async function requireAdmin() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) throw new Error("unauthorized");
+  return session;
+}
+
 export type Session = typeof auth.$Infer.Session;

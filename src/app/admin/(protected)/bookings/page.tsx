@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { bookings } from "@/db/schema";
+import { desc } from "drizzle-orm";
 import { updateBookingStatus } from "../../actions";
 import { ClipboardList, Phone, MapPin, Calendar, Clock, FileText, Home } from "lucide-react";
 
@@ -20,7 +21,7 @@ const statusLabels: Record<string, string> = {
 const allStatuses = ["pending", "contacted", "scheduled", "done"];
 
 export default async function AdminBookingsPage() {
-  const allBookings = await db.select().from(bookings).orderBy(bookings.createdAt);
+  const allBookings = await db.select().from(bookings).orderBy(desc(bookings.createdAt));
 
   return (
     <div>
