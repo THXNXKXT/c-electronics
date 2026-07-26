@@ -25,7 +25,8 @@ export function AdminProductsClient({
     image: string | null;
   }>;
 }) {
-  const [items] = useState(initialProducts);
+  // ponytail: items derived from props, not useState — router.refresh() updates this
+  const items = initialProducts;
   const [newImage, setNewImage] = useState("");
   const [newGallery, setNewGallery] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);

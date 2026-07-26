@@ -98,6 +98,7 @@ export const bookings = pgTable("bookings", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   ref: text("ref"), // ponytail: booking reference number, generated server-side
   serviceType: text("service_type").notNull(),
+  customerName: text("customer_name").notNull(),
   phone: text("phone").notNull(),
   district: text("district"),
   address: text("address"),

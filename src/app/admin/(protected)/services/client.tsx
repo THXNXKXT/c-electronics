@@ -19,9 +19,10 @@ export function AdminServicesClient({
     description: string | null;
     image: string | null;
     features: string | null;
+    archived: boolean;
   }>;
 }) {
-  const [items] = useState(initialServices);
+  const items = initialServices; // ponytail: derived from props for router.refresh()
   const [newImage, setNewImage] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [showArchived, setShowArchived] = useState(false);

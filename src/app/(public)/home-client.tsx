@@ -36,7 +36,7 @@ type Product = {
 
 function getIcon(name: string | null): LucideIcon {
   if (!name) return Icons.Wrench;
-  return (Icons as Record<string, LucideIcon>)[name] ?? Icons.Wrench;
+  return (Icons as unknown as Record<string, LucideIcon>)[name] ?? Icons.Wrench;
 }
 
 export function HomeClient({ services, products }: { services: Service[]; products: Product[] }) {

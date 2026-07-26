@@ -15,7 +15,8 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const [p] = await db.select().from(products).where(eq(products.slug, slug)).limit(1);
+  const decoded = decodeURIComponent(slug);
+  const [p] = await db.select().from(products).where(eq(products.slug, decoded)).limit(1);
   if (!p || p.archived) return { title: "ไม่พบสินค้า" };
   return {
     title: `${p.name} — แคตตาล็อกสินค้า`,
@@ -32,10 +33,11 @@ export default async function ProductDetail({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const decoded = decodeURIComponent(slug); // ponytail: Thai chars get percent-encoded in URL
   const [product] = await db
     .select()
     .from(products)
-    .where(eq(products.slug, slug))
+    .where(eq(products.slug, decoded))
     .limit(1);
 
   // 404 if missing or archived

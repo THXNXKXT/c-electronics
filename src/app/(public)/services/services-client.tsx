@@ -17,7 +17,7 @@ type Service = {
 // ponytail: icon names come from DB as strings — resolve at render time
 function getIcon(name: string | null): Icons.LucideIcon {
   if (!name) return Icons.Wrench;
-  const Icon = (Icons as Record<string, Icons.LucideIcon>)[name];
+  const Icon = (Icons as unknown as Record<string, Icons.LucideIcon>)[name];
   return Icon ?? Icons.Wrench;
 }
 
