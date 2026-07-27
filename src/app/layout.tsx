@@ -73,6 +73,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="th" className="antialiased">
+      <head>
+        <link rel="preload" href="/fonts/SukhumvitSet-Text.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/SukhumvitSet-Bold.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+      </head>
       <body className="flex min-h-screen flex-col">
         <script
           type="application/ld+json"

@@ -48,7 +48,7 @@ export function Footer({ phone, line, address, hours }: { phone: string; line: s
             <p className="flex min-h-11 items-center gap-2 text-sm text-muted"><Clock className="size-4 shrink-0 text-primary" /> {hours}</p>
           </div>
         </div>
-        <div className="mt-8 border-t border-black/5 pt-6 text-xs text-subtle">© 2025 C.Electronics · ช.อิเล็กทรอนิกส์ — {address}</div>
+        <div className="mt-8 border-t border-black/5 pt-6 text-xs text-subtle">© 2026 C.Electronics · ช.อิเล็กทรอนิกส์ — {address}</div>
       </div>
     </footer>
   );

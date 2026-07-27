@@ -1,10 +1,7 @@
 @import "tailwindcss";
 
 /* Self-hosted Sukhumvit Set WOFF2 — 163KB total, all devices see same font */
-@font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-Thin.woff2") format("woff2"); font-weight: 100; font-display: swap; }
-@font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-Light.woff2") format("woff2"); font-weight: 300; font-display: swap; }
 @font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-Text.woff2") format("woff2"); font-weight: 400; font-display: swap; }
-@font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
 @font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-SemiBold.woff2") format("woff2"); font-weight: 600; font-display: swap; }
 @font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 

@@ -25,6 +25,8 @@ export function ProductsClient({ products }: { products: Product[] }) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState("all");
   const [sort, setSort] = useState<"default" | "asc" | "desc">("default");
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 12;
 
   // ponytail: build categories from DB data, not hardcoded
   const categories = useMemo(() => {
@@ -42,6 +44,10 @@ export function ProductsClient({ products }: { products: Product[] }) {
     if (sort === "desc") result = [...result].sort((a, b) => b.price - a.price);
     return result;
   }, [query, active, sort, products]);
+
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const resetPage = () => setPage(1);
 
   return (
     <>
@@ -62,7 +68,7 @@ export function ProductsClient({ products }: { products: Product[] }) {
               <input
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => { setQuery(e.target.value); resetPage(); }}
                 placeholder="ค้นหาสินค้า..."
                 className="w-full rounded-xl border border-black/10 bg-white py-2.5 pl-11 pr-4 text-sm outline-none transition-colors focus:border-primary"
               />
@@ -72,7 +78,7 @@ export function ProductsClient({ products }: { products: Product[] }) {
                 <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-subtle" />
                 <select
                   value={sort}
-                  onChange={(e) => setSort(e.target.value as typeof sort)}
+                  onChange={(e) => { setSort(e.target.value as typeof sort); resetPage(); }}
                   className="appearance-none rounded-full border border-black/10 bg-white py-2 pl-8 pr-8 text-xs font-semibold outline-none transition-colors hover:border-ink/20 focus:border-primary sm:text-sm"
                 >
                   <option value="default">เรียงตาม</option>
@@ -84,7 +90,7 @@ export function ProductsClient({ products }: { products: Product[] }) {
                 {categories.map((c) => (
                   <button
                     key={c.value}
-                    onClick={() => setActive(c.value)}
+                    onClick={() => { setActive(c.value); resetPage(); }}
                     className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-colors sm:text-sm ${
                       active === c.value ? "bg-primary text-white" : "bg-canvas-muted text-muted hover:text-ink"
                     }`}
@@ -132,7 +138,7 @@ export function ProductsClient({ products }: { products: Product[] }) {
               </motion.p>
             </div>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {filtered.map((p, i) => (
+              {paged.map((p, i) => (
                 <motion.div
                   key={p.id}
                   initial={{ opacity: 0, y: 12 }}
@@ -170,6 +176,14 @@ export function ProductsClient({ products }: { products: Product[] }) {
               ))}
             </div>
           </>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-center gap-2">
+            <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-ink disabled:opacity-40">← ก่อนหน้า</button>
+            <span className="px-3 text-sm font-semibold tabular-nums text-muted">{page} / {totalPages}</span>
+            <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages} className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-ink disabled:opacity-40">ถัดไป →</button>
+          </div>
         )}
       </section>
 
