@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { db } from "@/db";
+import { settings } from "@/db/schema";
 import "./globals.css";
 
-const SITE_URL = "https://celectronics.com"; // ponytail: update when domain is live
+const SITE_URL = "https://www.c-electronics.online";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -40,6 +42,12 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
   alternates: { canonical: "/" },
+  other: {
+    "geo.region": "TH-57",
+    "geo.placename": "เชียงราย",
+    "geo.position": "19.9105;99.8406",
+    ICBM: "19.9105, 99.8406",
+  },
 };
 
 const localBusinessSchema = {
@@ -59,6 +67,7 @@ const localBusinessSchema = {
   priceRange: "฿",
   image: "/Logo.png",
   url: SITE_URL,
+  telephone: "+66-82-047-4073", // ponytail: update when real number available
   makesOffer: [
     { "@type": "Offer", itemOffered: { "@type": "Service", name: "ติดตั้งแอร์" } },
     { "@type": "Offer", itemOffered: { "@type": "Service", name: "ติดตั้งกล้องวงจรปิด" } },
@@ -68,9 +77,27 @@ const localBusinessSchema = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const [s] = await db.select().from(settings).limit(1);
+  const schema = {
+    ...localBusinessSchema,
+    telephone: s?.phone || undefined,
+    email: s?.email || undefined,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: s?.address || undefined,
+      addressLocality: "เชียงราย",
+      addressRegion: "เชียงราย",
+      addressCountry: "TH",
+    },
+    openingHours: [
+      s?.mondayFriday && `Mo-Fr ${s.mondayFriday.replace(" - ", "-")}`,
+      s?.saturday && `Sa ${s.saturday.replace(" - ", "-")}`,
+      s?.sunday && `Su ${s.sunday.replace(" - ", "-")}`,
+    ].filter(Boolean),
+  };
   return (
     <html lang="th" className="antialiased">
       <head>
@@ -80,7 +107,7 @@ export default function RootLayout({
       <body className="flex min-h-screen flex-col">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
         />
         {children}
       </body>

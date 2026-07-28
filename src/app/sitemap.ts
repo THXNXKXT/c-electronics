@@ -1,7 +1,17 @@
-// ponytail: Next.js generates /sitemap.xml from this file
-export default function sitemap() {
-  const base = "https://celectronics.com";
+import type { MetadataRoute } from "next";
+import { db } from "@/db";
+import { products, services } from "@/db/schema";
+import { eq } from "drizzle-orm";
+
+// ponytail: dynamic sitemap — pulls live product + service slugs from DB
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const base = "https://www.c-electronics.online";
   const now = new Date();
+
+  const [prods, svcs] = await Promise.all([
+    db.select({ slug: products.slug, updatedAt: products.updatedAt }).from(products).where(eq(products.archived, false)),
+    db.select({ slug: services.slug, updatedAt: services.updatedAt }).from(services).where(eq(services.archived, false)),
+  ]);
 
   return [
     { url: base, lastModified: now, changeFrequency: "weekly", priority: 1.0 },
@@ -10,5 +20,17 @@ export default function sitemap() {
     { url: `${base}/booking`, lastModified: now, changeFrequency: "yearly", priority: 0.7 },
     { url: `${base}/about`, lastModified: now, changeFrequency: "yearly", priority: 0.6 },
     { url: `${base}/contact`, lastModified: now, changeFrequency: "yearly", priority: 0.8 },
+    ...prods.map((p) => ({
+      url: `${base}/products/${encodeURIComponent(p.slug)}`,
+      lastModified: p.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    })),
+    ...svcs.map((s) => ({
+      url: `${base}/services#${encodeURIComponent(s.slug)}`,
+      lastModified: s.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
   ];
 }

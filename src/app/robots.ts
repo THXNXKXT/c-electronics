@@ -2,6 +2,6 @@
 export default function robots() {
   return {
     rules: { userAgent: "*", allow: "/", disallow: ["/admin/", "/api/"] },
-    sitemap: "https://celectronics.com/sitemap.xml",
+    sitemap: "https://www.c-electronics.online/sitemap.xml",
   };
 }

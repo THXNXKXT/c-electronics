@@ -24,6 +24,12 @@ export async function generateMetadata({
       p.description?.slice(0, 155) ??
       `${p.name} ราคา ฿${p.price.toLocaleString()} สอบถามได้ทางโทรศัพท์และ LINE`,
     alternates: { canonical: `/products/${p.slug}` },
+    openGraph: {
+      title: p.name,
+      description: p.description?.slice(0, 155) ?? `${p.name} ราคา ฿${p.price.toLocaleString()}`,
+      images: p.image ? [{ url: p.image, width: 800, height: 800, alt: p.name }] : [],
+      type: "website",
+    },
   };
 }
 
@@ -57,8 +63,31 @@ export default async function ProductDetail({
   const hasDiscount =
     !!product.compareAtPrice && product.compareAtPrice > product.price;
 
+  // ponytail: Product schema for Google Shopping / rich snippets
+  const productSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.description || product.name,
+    image: images.length > 0 ? images : undefined,
+    category: product.category,
+    url: `https://www.c-electronics.online/products/${encodeURIComponent(product.slug)}`,
+    offers: {
+      "@type": "Offer",
+      price: product.price,
+      priceCurrency: "THB",
+      availability: product.stock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      seller: { "@type": "Organization", name: "C.Electronics" },
+    },
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
       {/* ===== Breadcrumb ===== */}
       <nav className="mb-6 flex items-center gap-1 text-sm text-muted">
         <Link href="/products" className="transition-colors hover:text-primary">
