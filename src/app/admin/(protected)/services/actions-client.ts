@@ -3,6 +3,7 @@
 import { db } from "@/db";
 import { requireAdmin } from "@/lib/auth";
 import { services } from "@/db/schema";
+import { revalidateServicePages } from "@/lib/revalidate-service-pages";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -18,13 +19,13 @@ export async function createServiceAction(formData: FormData) {
   const slug = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9ก-๙-]/g, "") + "-" + crypto.randomUUID().slice(0, 6);
 
   await db.insert(services).values({ name, slug, price, icon, description, image, features });
-  revalidatePath("/admin/services");
+  revalidateServicePages(revalidatePath);
 }
 
 export async function archiveServiceAction(id: string, archived: boolean) {
   await requireAdmin();
   await db.update(services).set({ archived, updatedAt: new Date() }).where(eq(services.id, id));
-  revalidatePath("/admin/services");
+  revalidateServicePages(revalidatePath);
 }
 
 export async function updateServiceAction(id: string, formData: FormData) {
@@ -36,11 +37,11 @@ export async function updateServiceAction(id: string, formData: FormData) {
   const features = (formData.get("features") as string) || null;
 
   await db.update(services).set({ name, price, description, image, features, updatedAt: new Date() }).where(eq(services.id, id));
-  revalidatePath("/admin/services");
+  revalidateServicePages(revalidatePath);
 }
 
 export async function deleteServiceAction(id: string) {
   await requireAdmin();
   await db.delete(services).where(eq(services.id, id));
-  revalidatePath("/admin/services");
+  revalidateServicePages(revalidatePath);
 }
