@@ -141,6 +141,11 @@ export function buildServiceStructuredData(input: {
     name: input.name,
     url,
     dateModified: input.updatedAt.toISOString(),
+    provider: {
+      "@type": "Organization",
+      name: "C.Electronics",
+      url: SITE_URL,
+    },
   };
 
   if (description) service.description = description;
