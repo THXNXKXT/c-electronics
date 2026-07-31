@@ -118,6 +118,8 @@ export function ServiceForm({
   const [pendingSave, setPendingSave] = useState<{
     formData: FormData;
     revision: number;
+    expectedOldSlug: string;
+    expectedNewSlug: string;
   } | null>(null);
 
   useEffect(() => {
@@ -175,6 +177,7 @@ export function ServiceForm({
     formData: FormData,
     submittedRevision: number,
     onSettled?: () => void,
+    onRejected?: () => void,
   ) {
     runAction(async () => {
       try {
@@ -201,6 +204,9 @@ export function ServiceForm({
         } else {
           router.refresh();
         }
+      } catch (caught) {
+        onRejected?.();
+        throw caught;
       } finally {
         onSettled?.();
       }
@@ -217,7 +223,12 @@ export function ServiceForm({
       service?.publishedAt &&
       nextSlug !== slugifyServiceName(service.slug)
     ) {
-      setPendingSave({ formData, revision: editorRevision.current });
+      setPendingSave({
+        formData,
+        revision: editorRevision.current,
+        expectedOldSlug: service.slug,
+        expectedNewSlug: nextSlug,
+      });
       setConfirmation("slug-change");
       return;
     }
@@ -248,10 +259,18 @@ export function ServiceForm({
         return;
       }
       slugConfirmationSubmittingRef.current = true;
-      markServiceSlugChangeConfirmed(saveRequest.formData);
-      save(saveRequest.formData, saveRequest.revision, () => {
-        slugConfirmationSubmittingRef.current = false;
+      markServiceSlugChangeConfirmed(saveRequest.formData, {
+        expectedOldSlug: saveRequest.expectedOldSlug,
+        expectedNewSlug: saveRequest.expectedNewSlug,
       });
+      save(
+        saveRequest.formData,
+        saveRequest.revision,
+        () => {
+          slugConfirmationSubmittingRef.current = false;
+        },
+        () => router.refresh(),
+      );
       return;
     }
 

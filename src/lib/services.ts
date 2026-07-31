@@ -34,18 +34,73 @@ export type ServiceContent = ArticleDocument;
 
 const SERVICE_SLUG_CHANGE_CONFIRMATION_FIELD = "confirmSlugChange";
 const SERVICE_SLUG_CHANGE_CONFIRMATION_VALUE = "confirmed";
+const SERVICE_SLUG_CHANGE_EXPECTED_OLD_FIELD = "expectedOldSlug";
+const SERVICE_SLUG_CHANGE_EXPECTED_NEW_FIELD = "expectedNewSlug";
+const SERVICE_SLUG_CHANGE_MAX_LENGTH = 180;
 
-export function hasServiceSlugChangeConfirmation(formData: FormData): boolean {
-  return (
-    formData.get(SERVICE_SLUG_CHANGE_CONFIRMATION_FIELD) ===
-    SERVICE_SLUG_CHANGE_CONFIRMATION_VALUE
+export type ServiceSlugChangeConfirmation = {
+  expectedOldSlug: string;
+  expectedNewSlug: string;
+};
+
+function invalidServiceSlugChangeConfirmation(): never {
+  throw new ServiceUserFacingError(
+    "ข้อมูลยืนยันการเปลี่ยน URL ไม่ถูกต้อง กรุณายืนยันอีกครั้ง",
   );
 }
 
-export function markServiceSlugChangeConfirmed(formData: FormData): void {
+function parseExpectedServiceSlug(value: FormDataEntryValue | null): string {
+  if (typeof value !== "string") invalidServiceSlugChangeConfirmation();
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > SERVICE_SLUG_CHANGE_MAX_LENGTH) {
+    invalidServiceSlugChangeConfirmation();
+  }
+
+  const normalized = normalizeServiceRouteSlug(trimmed);
+  if (
+    !normalized ||
+    normalized.length > SERVICE_SLUG_CHANGE_MAX_LENGTH ||
+    /[/?#]/.test(normalized)
+  ) {
+    invalidServiceSlugChangeConfirmation();
+  }
+  return normalized;
+}
+
+export function parseServiceSlugChangeConfirmation(
+  formData: FormData,
+): ServiceSlugChangeConfirmation | null {
+  const marker = formData.get(SERVICE_SLUG_CHANGE_CONFIRMATION_FIELD);
+  const expectedOld = formData.get(SERVICE_SLUG_CHANGE_EXPECTED_OLD_FIELD);
+  const expectedNew = formData.get(SERVICE_SLUG_CHANGE_EXPECTED_NEW_FIELD);
+  if (marker === null && expectedOld === null && expectedNew === null) {
+    return null;
+  }
+  if (marker !== SERVICE_SLUG_CHANGE_CONFIRMATION_VALUE) {
+    invalidServiceSlugChangeConfirmation();
+  }
+
+  return {
+    expectedOldSlug: parseExpectedServiceSlug(expectedOld),
+    expectedNewSlug: parseExpectedServiceSlug(expectedNew),
+  };
+}
+
+export function markServiceSlugChangeConfirmed(
+  formData: FormData,
+  confirmation: ServiceSlugChangeConfirmation,
+): void {
   formData.set(
     SERVICE_SLUG_CHANGE_CONFIRMATION_FIELD,
     SERVICE_SLUG_CHANGE_CONFIRMATION_VALUE,
+  );
+  formData.set(
+    SERVICE_SLUG_CHANGE_EXPECTED_OLD_FIELD,
+    normalizeServiceRouteSlug(confirmation.expectedOldSlug),
+  );
+  formData.set(
+    SERVICE_SLUG_CHANGE_EXPECTED_NEW_FIELD,
+    normalizeServiceRouteSlug(confirmation.expectedNewSlug),
   );
 }
 
@@ -53,13 +108,26 @@ export function assertServiceSlugChangeConfirmed(input: {
   previousSlug: string;
   nextSlug: string;
   publishedAt: Date | null;
-  confirmed: boolean;
+  confirmation: ServiceSlugChangeConfirmation | null;
 }): void {
-  if (
-    input.previousSlug !== input.nextSlug &&
-    input.publishedAt !== null &&
-    !input.confirmed
-  ) {
+  const previousSlug = normalizeServiceRouteSlug(input.previousSlug);
+  const nextSlug = normalizeServiceRouteSlug(input.nextSlug);
+  const slugChanged = previousSlug !== nextSlug;
+
+  if (input.confirmation) {
+    if (
+      !slugChanged ||
+      input.confirmation.expectedOldSlug !== previousSlug ||
+      input.confirmation.expectedNewSlug !== nextSlug
+    ) {
+      throw new ServiceUserFacingError(
+        "ข้อมูลบริการเปลี่ยนแปลงแล้ว กรุณาโหลดข้อมูลล่าสุดและยืนยันการเปลี่ยน URL อีกครั้ง",
+      );
+    }
+    return;
+  }
+
+  if (slugChanged && input.publishedAt !== null) {
     throw new ServiceUserFacingError(
       "กรุณายืนยันการเปลี่ยน URL บริการที่เคยเผยแพร่แล้ว",
     );

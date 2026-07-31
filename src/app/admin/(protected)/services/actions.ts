@@ -20,7 +20,7 @@ import {
   assertServiceSlugChangeConfirmed,
   canDeleteServicePermanently,
   getServicePublicationMutation,
-  hasServiceSlugChangeConfirmation,
+  parseServiceSlugChangeConfirmation,
   requireServiceActionBoolean,
   resolveServiceCanonicalAfterSlugChange,
 } from "@/lib/services";
@@ -103,7 +103,8 @@ export async function updateServiceAction(
   formData: FormData,
 ): Promise<ServiceActionResult<{ id: string; slug: string }>> {
   return runAuthorizedServiceAction(requireAdmin, async () => {
-    const slugChangeConfirmed = hasServiceSlugChangeConfirmation(formData);
+    const slugChangeConfirmation =
+      parseServiceSlugChangeConfirmation(formData);
     const articleSlugs = await listArticleSlugsForService(id);
     const input = parseServiceInput(formData);
     const now = new Date();
@@ -123,16 +124,16 @@ export async function updateServiceAction(
 
       if (!lockedService) throw new ServiceUserFacingError("ไม่พบบริการ");
       const slugChanged = lockedService.slug !== input.slug;
-      const historicalRedirects = await tx
-        .select({ slug: serviceSlugRedirects.slug })
-        .from(serviceSlugRedirects)
-        .where(eq(serviceSlugRedirects.serviceId, id));
       assertServiceSlugChangeConfirmed({
         previousSlug: lockedService.slug,
         nextSlug: input.slug,
         publishedAt: lockedService.publishedAt,
-        confirmed: slugChangeConfirmed,
+        confirmation: slugChangeConfirmation,
       });
+      const historicalRedirects = await tx
+        .select({ slug: serviceSlugRedirects.slug })
+        .from(serviceSlugRedirects)
+        .where(eq(serviceSlugRedirects.serviceId, id));
       const resolvedCanonicalUrl = resolveServiceCanonicalAfterSlugChange({
         canonicalUrl: input.canonicalUrl,
         previousSlug: lockedService.slug,

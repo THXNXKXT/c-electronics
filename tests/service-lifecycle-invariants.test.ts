@@ -4,8 +4,8 @@ import test from "node:test";
 import {
   assertServiceSlugChangeConfirmed,
   getServicePublicationMutation,
-  hasServiceSlugChangeConfirmation,
   markServiceSlugChangeConfirmed,
+  parseServiceSlugChangeConfirmation,
   requireServiceActionBoolean,
   resolveServiceCanonicalAfterSlugChange,
 } from "../src/lib/services";
@@ -103,19 +103,51 @@ test("exported lifecycle actions validate runtime inputs before database work", 
   assert.doesNotMatch(publicationBody, /archived:\s*publish\s*\?/);
 });
 
-test("slug-change confirmation is an explicit FormData intent and defaults false", () => {
+test("slug-change confirmation binds normalized expected old and new slugs", () => {
   const formData = new FormData();
-  assert.equal(hasServiceSlugChangeConfirmation(formData), false);
+  assert.equal(parseServiceSlugChangeConfirmation(formData), null);
 
   formData.set("confirmSlugChange", "true");
-  assert.equal(hasServiceSlugChangeConfirmation(formData), false);
+  assert.throws(
+    () => parseServiceSlugChangeConfirmation(formData),
+    /ข้อมูลยืนยันการเปลี่ยน URL ไม่ถูกต้อง/,
+  );
 
-  markServiceSlugChangeConfirmed(formData);
-  assert.equal(hasServiceSlugChangeConfirmation(formData), true);
+  markServiceSlugChangeConfirmed(formData, {
+    expectedOldSlug: encodeURIComponent("บริการเดิม"),
+    expectedNewSlug: "บริการใหม่",
+  });
+  assert.deepEqual(parseServiceSlugChangeConfirmation(formData), {
+    expectedOldSlug: "บริการเดิม",
+    expectedNewSlug: "บริการใหม่",
+  });
 });
 
-test("post-publication slug changes require confirmation using locked history", () => {
+test("malformed or unbounded slug-change confirmation fields reject", () => {
+  const missing = new FormData();
+  missing.set("confirmSlugChange", "confirmed");
+  missing.set("expectedOldSlug", "บริการเดิม");
+  assert.throws(
+    () => parseServiceSlugChangeConfirmation(missing),
+    /ข้อมูลยืนยันการเปลี่ยน URL ไม่ถูกต้อง/,
+  );
+
+  const oversized = new FormData();
+  oversized.set("confirmSlugChange", "confirmed");
+  oversized.set("expectedOldSlug", "ก".repeat(181));
+  oversized.set("expectedNewSlug", "บริการใหม่");
+  assert.throws(
+    () => parseServiceSlugChangeConfirmation(oversized),
+    /ข้อมูลยืนยันการเปลี่ยน URL ไม่ถูกต้อง/,
+  );
+});
+
+test("post-publication slug changes require the exact locked transition", () => {
   const publishedAt = new Date("2026-07-31T03:00:00.000Z");
+  const confirmation = {
+    expectedOldSlug: "ติดตั้งจานดาวเทียม",
+    expectedNewSlug: "ติดตั้งจานดาวเทียม-เชียงราย",
+  };
 
   assert.throws(
     () =>
@@ -123,7 +155,7 @@ test("post-publication slug changes require confirmation using locked history", 
         previousSlug: "ติดตั้งจานดาวเทียม",
         nextSlug: "ติดตั้งจานดาวเทียม-เชียงราย",
         publishedAt,
-        confirmed: false,
+        confirmation: null,
       }),
     /ยืนยันการเปลี่ยน URL/,
   );
@@ -133,7 +165,7 @@ test("post-publication slug changes require confirmation using locked history", 
       previousSlug: "ติดตั้งจานดาวเทียม",
       nextSlug: "ติดตั้งจานดาวเทียม-เชียงราย",
       publishedAt,
-      confirmed: true,
+      confirmation,
     }),
   );
   assert.doesNotThrow(() =>
@@ -141,8 +173,63 @@ test("post-publication slug changes require confirmation using locked history", 
       previousSlug: "ร่างเดิม",
       nextSlug: "ร่างใหม่",
       publishedAt: null,
-      confirmed: false,
+      confirmation: null,
     }),
+  );
+});
+
+test("stale, queued, and replayed confirmations cannot authorize another slug transition", () => {
+  const publishedAt = new Date("2026-07-31T03:00:00.000Z");
+  const requestB = {
+    expectedOldSlug: "บริการเดิม",
+    expectedNewSlug: "บริการ-b",
+  };
+
+  assert.doesNotThrow(() =>
+    assertServiceSlugChangeConfirmed({
+      previousSlug: "บริการเดิม",
+      nextSlug: "บริการ-b",
+      publishedAt,
+      confirmation: requestB,
+    }),
+  );
+  assert.throws(
+    () =>
+      assertServiceSlugChangeConfirmed({
+        previousSlug: "บริการ-a",
+        nextSlug: "บริการ-b",
+        publishedAt,
+        confirmation: requestB,
+      }),
+    /ข้อมูลบริการเปลี่ยนแปลงแล้ว/,
+  );
+  assert.doesNotThrow(() =>
+    assertServiceSlugChangeConfirmed({
+      previousSlug: "บริการ-b",
+      nextSlug: "บริการ-b",
+      publishedAt,
+      confirmation: null,
+    }),
+  );
+  assert.throws(
+    () =>
+      assertServiceSlugChangeConfirmed({
+        previousSlug: "บริการ-b",
+        nextSlug: "บริการ-b",
+        publishedAt,
+        confirmation: requestB,
+      }),
+    /ข้อมูลบริการเปลี่ยนแปลงแล้ว/,
+  );
+  assert.throws(
+    () =>
+      assertServiceSlugChangeConfirmed({
+        previousSlug: "บริการเดิม",
+        nextSlug: "บริการ-c",
+        publishedAt,
+        confirmation: requestB,
+      }),
+    /ข้อมูลบริการเปลี่ยนแปลงแล้ว/,
   );
 });
 
@@ -163,7 +250,7 @@ test("publish then unpublish still requires rename confirmation without redirect
         previousSlug: "บริการเดิม",
         nextSlug: "บริการใหม่",
         publishedAt: unpublished.publishedAt,
-        confirmed: false,
+        confirmation: null,
       }),
     /ยืนยันการเปลี่ยน URL/,
   );
@@ -183,10 +270,10 @@ test("update action enforces slug confirmation against the locked database row",
   );
   const updateBody = source.slice(updateStart, publicationStart);
 
-  assert.match(updateBody, /hasServiceSlugChangeConfirmation\(formData\)/);
+  assert.match(updateBody, /parseServiceSlugChangeConfirmation\(formData\)/);
   assert.match(
     updateBody,
-    /\.for\("update"\)[\s\S]*assertServiceSlugChangeConfirmed\([\s\S]*publishedAt:\s*lockedService\.publishedAt[\s\S]*confirmed:\s*slugChangeConfirmed/,
+    /\.for\("update"\)[\s\S]*assertServiceSlugChangeConfirmed\([\s\S]*publishedAt:\s*lockedService\.publishedAt[\s\S]*confirmation:\s*slugChangeConfirmation[\s\S]*if \(slugChanged\)/,
   );
 });
 
@@ -203,7 +290,15 @@ test("slug modal marks one captured current FormData intent and blocks repeats",
   assert.match(source, /canSubmitServiceSlugChangeConfirmation\(/);
   assert.match(
     source,
-    /markServiceSlugChangeConfirmed\(saveRequest\.formData\)[\s\S]*save\(saveRequest\.formData, saveRequest\.revision/,
+    /expectedOldSlug:\s*service\.slug[\s\S]*expectedNewSlug:\s*nextSlug/,
+  );
+  assert.match(
+    source,
+    /markServiceSlugChangeConfirmed\(saveRequest\.formData,\s*\{[\s\S]*expectedOldSlug:\s*saveRequest\.expectedOldSlug[\s\S]*expectedNewSlug:\s*saveRequest\.expectedNewSlug/,
+  );
+  assert.match(
+    source,
+    /save\(\s*saveRequest\.formData,\s*saveRequest\.revision,[\s\S]*slugConfirmationSubmittingRef\.current = false[\s\S]*router\.refresh\(\)/,
   );
 });
 
