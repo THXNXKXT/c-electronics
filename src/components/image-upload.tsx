@@ -2,6 +2,7 @@
 
 import {
   createUploadActivityTracker,
+  toSafeImageUploadError,
   type UploadActivityTracker,
 } from "@/lib/upload-activity";
 import { useEffect, useRef, useState } from "react";
@@ -73,7 +74,7 @@ export function ImageUpload({
       if (mountedRef.current) onChange(optimized, data.public_id);
     } catch (err) {
       if (mountedRef.current) {
-        setError(err instanceof Error ? err.message : "อัพโหลดไม่สำเร็จ");
+        setError(toSafeImageUploadError(err));
       }
     } finally {
       trackerRef.current?.finish();

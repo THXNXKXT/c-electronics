@@ -9,6 +9,17 @@ export type UploadBusyCounter = {
   dispose: () => void;
 };
 
+export const SAFE_IMAGE_UPLOAD_ERROR =
+  "อัปโหลดรูปไม่สำเร็จ กรุณาลองใหม่อีกครั้ง";
+
+export function toSafeImageUploadError(
+  error: unknown,
+  logUnexpected: (error: unknown) => void = console.error,
+): string {
+  logUnexpected(error);
+  return SAFE_IMAGE_UPLOAD_ERROR;
+}
+
 export function createUploadActivityTracker(
   notify: (uploading: boolean) => void,
 ): UploadActivityTracker {

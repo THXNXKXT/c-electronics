@@ -2,7 +2,9 @@
 
 import type { ArticleDocument } from "@/lib/articles";
 import {
+  SAFE_IMAGE_UPLOAD_ERROR,
   createUploadActivityTracker,
+  toSafeImageUploadError,
   type UploadActivityTracker,
 } from "@/lib/upload-activity";
 import Image from "@tiptap/extension-image";
@@ -34,6 +36,15 @@ type ToolbarButtonProps = {
   onClick: () => void;
   children: React.ReactNode;
 };
+
+export function setRichTextEditorDisabled(
+  editor: {
+    setEditable: (editable: boolean, emitUpdate?: boolean) => void;
+  },
+  disabled: boolean,
+) {
+  editor.setEditable(!disabled, false);
+}
 
 function ToolbarButton({
   label,
@@ -115,7 +126,7 @@ export function ArticleRichTextEditor({
   });
 
   useEffect(() => {
-    editor?.setEditable(!disabled);
+    if (editor) setRichTextEditorDisabled(editor, disabled);
   }, [disabled, editor]);
 
   useEffect(() => {
@@ -168,7 +179,7 @@ export function ArticleRichTextEditor({
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
     const preset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
     if (!cloudName || !preset) {
-      setUploadError("ยังไม่ได้ตั้งค่า Cloudinary");
+      setUploadError(SAFE_IMAGE_UPLOAD_ERROR);
       return;
     }
 
@@ -207,9 +218,7 @@ export function ArticleRichTextEditor({
       }
     } catch (error) {
       if (mountedRef.current) {
-        setUploadError(
-          error instanceof Error ? error.message : "อัปโหลดรูปไม่สำเร็จ",
-        );
+        setUploadError(toSafeImageUploadError(error));
       }
     } finally {
       uploadTrackerRef.current?.finish();

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  SAFE_IMAGE_UPLOAD_ERROR,
   createUploadActivityTracker,
   createUploadBusyCounter,
+  toSafeImageUploadError,
 } from "../src/lib/upload-activity";
 
 test("upload activity reports one busy interval", () => {
@@ -59,4 +61,17 @@ test("disposed upload counter ignores Strict Mode cleanup replays", () => {
   counter.setSourceActive("cover", true);
 
   assert.deepEqual(states, [true]);
+});
+
+test("upload rejection details are logged but never shown to the user", () => {
+  const rawError = new Error("HTTP 401 cloud token secret");
+  const logged: unknown[] = [];
+
+  const message = toSafeImageUploadError(rawError, (error) =>
+    logged.push(error),
+  );
+
+  assert.equal(message, SAFE_IMAGE_UPLOAD_ERROR);
+  assert.deepEqual(logged, [rawError]);
+  assert.doesNotMatch(message, /HTTP|401|cloud|token|secret/i);
 });

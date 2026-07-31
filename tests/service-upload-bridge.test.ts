@@ -105,3 +105,22 @@ test("service clients map rejected runtime errors to a safe message", async () =
     assert.doesNotMatch(source, /caught instanceof Error \? caught\.message/);
   }
 });
+
+test("cover and inline image upload catches use the safe error mapper", async () => {
+  const sources = await Promise.all([
+    readFile(
+      new URL("../src/components/image-upload.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../src/components/article-rich-text-editor.tsx", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  for (const source of sources) {
+    assert.match(source, /toSafeImageUploadError\(/);
+    assert.doesNotMatch(source, /setError\(err instanceof Error \? err\.message/);
+    assert.doesNotMatch(source, /error instanceof Error \? error\.message/);
+  }
+});
