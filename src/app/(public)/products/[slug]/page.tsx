@@ -77,7 +77,6 @@ export default async function ProductDetail({
       price: product.price,
       priceCurrency: "THB",
       availability: product.stock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
       seller: { "@type": "Organization", name: "C.Electronics" },
     },
   };

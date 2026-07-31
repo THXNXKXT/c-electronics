@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, Loader2, X, Images, AlertCircle } from "lucide-react";
+import { Loader2, X, Images, AlertCircle } from "lucide-react";
 
 export function MultiImageUpload({
   value,

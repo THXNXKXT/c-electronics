@@ -11,8 +11,9 @@ async function main() {
       body: { email, password, name },
     });
     console.log(`✓ Admin created: ${email}`);
-  } catch (e: any) {
-    console.log(`Already exists or error: ${e.message}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.log(`Already exists or error: ${message}`);
   }
 }
 
