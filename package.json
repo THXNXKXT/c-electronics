@@ -11,6 +11,8 @@
     "db:migrate": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs migrate",
     "db:seed:articles": "node --env-file=.env.local --import tsx scripts/seed-articles.ts",
     "db:verify:articles": "node --env-file=.env.local --import tsx scripts/verify-articles.ts",
+    "db:seed:services": "node --env-file=.env.local --import tsx scripts/seed-services.ts",
+    "db:verify:services": "node --env-file=.env.local --import tsx scripts/verify-services.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
