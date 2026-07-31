@@ -97,6 +97,7 @@ export function ConfirmModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-modal-title"
+        aria-describedby="confirm-modal-description"
         tabIndex={-1}
         onKeyDown={(event) => {
           const keyboardAction = getDialogKeyboardAction(event.key);
@@ -129,7 +130,7 @@ export function ConfirmModal({
             focusable[nextIndex]?.focus();
           }
         }}
-        className="relative w-full max-w-sm rounded-[20px] bg-white p-6 shadow-xl"
+        className="relative max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-[20px] bg-white p-6 shadow-xl"
       >
         <button
           type="button"
@@ -146,7 +147,12 @@ export function ConfirmModal({
         </div>
 
         <h3 id="confirm-modal-title" className="mt-4 text-lg font-bold tracking-tight">{title}</h3>
-        <p className="mt-1.5 text-sm text-muted">{message}</p>
+        <p
+          id="confirm-modal-description"
+          className="mt-1.5 break-all text-sm text-muted"
+        >
+          {message}
+        </p>
 
         <div className="mt-6 flex gap-3">
           <button type="button" disabled={busy} onClick={onCancel} className="flex-1 whitespace-nowrap rounded-full border border-black/10 bg-white py-2.5 text-sm font-semibold text-ink transition-colors hover:border-ink disabled:opacity-40">

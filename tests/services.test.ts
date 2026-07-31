@@ -8,6 +8,7 @@ import {
   isIndexableService,
   normalizeServiceRouteSlug,
   resolveServiceCanonical,
+  resolveServiceCanonicalAfterSlugChange,
   resolveServiceSeo,
   slugifyServiceName,
 } from "../src/lib/services";
@@ -166,6 +167,62 @@ test("metadata, sitemap, and JSON-LD resolve one canonical service identity", ()
   assert.equal(sitemapService?.url, canonical);
   assert.equal(structured[0]["@id"], canonical);
   assert.equal(structured[0].url, canonical);
+});
+
+test("canonical migration keeps metadata, sitemap, and JSON-LD off the redirected identity", () => {
+  const baseUrl = "https://www.c-electronics.online";
+  const migratedCanonicalUrl = resolveServiceCanonicalAfterSlugChange({
+    canonicalUrl: "/services/service－old",
+    previousSlug: "service－old",
+    nextSlug: "service-old",
+    historicalSlugs: [],
+  });
+  assert.equal(migratedCanonicalUrl, null);
+
+  const service = {
+    name: "บริการทดสอบ",
+    slug: "service-old",
+    description: "รายละเอียดบริการทดสอบที่แสดงต่อผู้ใช้",
+    status: "published" as const,
+    archived: false,
+    noIndex: false,
+    canonicalUrl: migratedCanonicalUrl,
+  };
+  const canonical = resolveServiceCanonical(service, baseUrl);
+  const seo = resolveServiceSeo(service);
+  const sitemap = buildSitemapEntries({
+    baseUrl,
+    now: new Date("2026-08-01T00:00:00.000Z"),
+    products: [],
+    services: [
+      {
+        slug: service.slug,
+        canonicalUrl: service.canonicalUrl,
+        updatedAt: new Date("2026-08-01T00:00:00.000Z"),
+      },
+    ],
+    articles: [],
+  });
+  const structured = buildServiceStructuredData({
+    ...service,
+    image: null,
+    price: null,
+    faqs: [],
+    updatedAt: new Date("2026-08-01T00:00:00.000Z"),
+    canonicalUrl: canonical,
+  });
+
+  assert.equal(canonical, `${baseUrl}/services/service-old`);
+  assert.equal(seo.canonical, canonical);
+  assert.ok(
+    sitemap.some(
+      (entry) =>
+        entry.url === "https://www.c-electronics.online/services/service-old",
+    ),
+  );
+  assert.equal(structured[0]["@id"], canonical);
+  assert.equal(structured[0].url, canonical);
+  assert.doesNotMatch(JSON.stringify({ seo, sitemap, structured }), /service%EF%BC%8Dold/);
 });
 
 test("protects published history and revalidates all consumers", () => {

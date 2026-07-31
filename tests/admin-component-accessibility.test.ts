@@ -21,7 +21,13 @@ test("confirmation dialog exposes its title and named close control", () => {
   assert.match(markup, /role="dialog"/);
   assert.match(markup, /aria-modal="true"/);
   assert.match(markup, /aria-labelledby="confirm-modal-title"/);
+  assert.match(markup, /aria-describedby="confirm-modal-description"/);
+  assert.match(markup, /id="confirm-modal-description"/);
   assert.match(markup, /aria-label="ปิดหน้าต่างยืนยัน"/);
+  assert.match(
+    markup,
+    /role="dialog"[^>]*class="[^"]*max-h-\[calc\(100dvh-2rem\)\][^"]*overflow-y-auto/,
+  );
 });
 
 test("slug confirmation visibly and safely renders the exact URL transition", () => {
@@ -44,6 +50,30 @@ test("slug confirmation visibly and safely renders the exact URL transition", ()
   assert.match(markup, /ใหม่&lt;img src=x&gt;/);
   assert.match(markup, /→/);
   assert.doesNotMatch(markup, /<script>|<img src=x>/);
+});
+
+test("slug confirmation wraps and preserves the longest accepted transition", () => {
+  const oldSlug = "ก".repeat(2_048);
+  const newSlug = "ข".repeat(180);
+  const copy = getServiceConfirmation("slug-change", "บริการทดสอบ", {
+    oldSlug,
+    newSlug,
+  });
+  const markup = renderToStaticMarkup(
+    React.createElement(ConfirmModal, {
+      open: true,
+      ...copy,
+      onConfirm() {},
+      onCancel() {},
+    }),
+  );
+
+  assert.ok(markup.includes(`/services/${oldSlug}`));
+  assert.ok(markup.includes(`/services/${newSlug}`));
+  assert.match(
+    markup,
+    /id="confirm-modal-description"[^>]*class="[^"]*break-all/,
+  );
 });
 
 test("image upload uses a keyboard button and names image removal", () => {

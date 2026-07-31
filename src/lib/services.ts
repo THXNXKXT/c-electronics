@@ -162,7 +162,7 @@ function serviceSlugFromCanonical(canonicalUrl: string): string | null {
     if (!pathname.startsWith(prefix)) return null;
     const encodedSlug = pathname.slice(prefix.length).replace(/\/+$/, "");
     if (!encodedSlug || encodedSlug.includes("/")) return null;
-    const slug = decodeURIComponent(encodedSlug).normalize("NFKC");
+    const slug = decodeURIComponent(encodedSlug);
     return slug.includes("/") ? null : slug;
   } catch {
     return null;
@@ -181,13 +181,11 @@ export function resolveServiceCanonicalAfterSlugChange(input: {
   const targetSlug = serviceSlugFromCanonical(canonical);
   if (!targetSlug) return canonical;
 
-  const normalizedTarget = normalizeServiceRouteSlug(targetSlug);
   const targetsOldSelf =
-    normalizeServiceRouteSlug(input.previousSlug) !==
-      normalizeServiceRouteSlug(input.nextSlug) &&
-    normalizedTarget === normalizeServiceRouteSlug(input.previousSlug);
+    isServiceSlugStorageChange(input.previousSlug, input.nextSlug) &&
+    targetSlug === input.previousSlug;
   const targetsHistoricalSelf = input.historicalSlugs.some(
-    (slug) => normalizeServiceRouteSlug(slug) === normalizedTarget,
+    (slug) => slug === targetSlug,
   );
 
   return targetsOldSelf || targetsHistoricalSelf ? null : canonical;

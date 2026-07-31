@@ -415,10 +415,72 @@ test("slug rename clears encoded same-site canonicals that target the old self U
   );
 });
 
-test("historical self canonicals normalize to the current slug while custom canonicals remain", () => {
+test("canonical migration compares the exact decoded physical slug", () => {
+  assert.equal(
+    resolveServiceCanonicalAfterSlugChange({
+      canonicalUrl: "/services/service－old",
+      previousSlug: "service－old",
+      nextSlug: "service-old",
+      historicalSlugs: [],
+    }),
+    null,
+  );
+  assert.equal(
+    resolveServiceCanonicalAfterSlugChange({
+      canonicalUrl: "/services/service-old",
+      previousSlug: "service－old",
+      nextSlug: "service-old",
+      historicalSlugs: [],
+    }),
+    "https://www.c-electronics.online/services/service-old",
+  );
+  assert.equal(
+    resolveServiceCanonicalAfterSlugChange({
+      canonicalUrl: "/services/custom－landing",
+      previousSlug: "service－old",
+      nextSlug: "service-old",
+      historicalSlugs: [],
+    }),
+    "https://www.c-electronics.online/services/custom%EF%BC%8Dlanding",
+  );
+});
+
+test("canonical migration safely handles encoded Thai and malformed paths", () => {
+  const previousSlug = "บริการ－เดิม";
+  assert.equal(
+    resolveServiceCanonicalAfterSlugChange({
+      canonicalUrl: `/services/${encodeURIComponent(previousSlug)}`,
+      previousSlug,
+      nextSlug: "บริการ-เดิม",
+      historicalSlugs: [],
+    }),
+    null,
+  );
+  assert.equal(
+    resolveServiceCanonicalAfterSlugChange({
+      canonicalUrl: "/services/%E0%A4%A",
+      previousSlug,
+      nextSlug: "บริการ-เดิม",
+      historicalSlugs: [],
+    }),
+    "https://www.c-electronics.online/services/%E0%A4%A",
+  );
+});
+
+test("historical self canonicals require an exact decoded slug while custom canonicals remain", () => {
   assert.equal(
     resolveServiceCanonicalAfterSlugChange({
       canonicalUrl: "/services/จานดาวเทียม－เชียงราย",
+      previousSlug: "ติดตั้งจานดาวเทียม-เชียงราย",
+      nextSlug: "ติดตั้งจานดาวเทียม-เชียงราย",
+      historicalSlugs: ["จานดาวเทียม-เชียงราย"],
+    }),
+    "https://www.c-electronics.online/services/%E0%B8%88%E0%B8%B2%E0%B8%99%E0%B8%94%E0%B8%B2%E0%B8%A7%E0%B9%80%E0%B8%97%E0%B8%B5%E0%B8%A2%E0%B8%A1%EF%BC%8D%E0%B9%80%E0%B8%8A%E0%B8%B5%E0%B8%A2%E0%B8%87%E0%B8%A3%E0%B8%B2%E0%B8%A2",
+  );
+
+  assert.equal(
+    resolveServiceCanonicalAfterSlugChange({
+      canonicalUrl: "/services/จานดาวเทียม-เชียงราย",
       previousSlug: "ติดตั้งจานดาวเทียม-เชียงราย",
       nextSlug: "ติดตั้งจานดาวเทียม-เชียงราย",
       historicalSlugs: ["จานดาวเทียม-เชียงราย"],
