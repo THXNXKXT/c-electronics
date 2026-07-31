@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
 import { ImageUpload } from "@/components/image-upload";
-import { updateServiceAction } from "../../actions-client";
+import { updateServiceAction } from "../../actions";
 
 export function AdminServiceEditClient({
   service,

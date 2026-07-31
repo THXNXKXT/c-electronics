@@ -12,8 +12,10 @@ test("revalidates every page that displays service data", async () => {
   );
 
   const revalidated: string[] = [];
-  serviceCacheModule.revalidateServicePages((path: string) =>
-    revalidated.push(path),
+  serviceCacheModule.revalidateServicePages(
+    (path: string) => revalidated.push(path),
+    ["old-slug", "new-slug"],
+    ["cctv-guide"],
   );
 
   assert.deepEqual(revalidated, [
@@ -21,5 +23,10 @@ test("revalidates every page that displays service data", async () => {
     "/",
     "/services",
     "/booking",
+    "/articles",
+    "/sitemap.xml",
+    "/services/old-slug",
+    "/services/new-slug",
+    "/articles/cctv-guide",
   ]);
 });

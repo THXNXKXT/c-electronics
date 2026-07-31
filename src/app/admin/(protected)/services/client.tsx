@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { Wrench, Plus, Trash2, Pencil, Archive, ArchiveRestore } from "lucide-react";
 import Link from "next/link";
 import { ImageUpload } from "@/components/image-upload";
-import { createServiceAction, deleteServiceAction, archiveServiceAction } from "./actions-client";
+import {
+  createServiceAction,
+  deleteDraftServiceAction as deleteServiceAction,
+  setServiceArchivedAction as archiveServiceAction,
+} from "./actions";
 import { ConfirmModal } from "@/components/confirm-modal";
 
 export function AdminServicesClient({
