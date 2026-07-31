@@ -15,3 +15,28 @@ export function getDialogKeyboardAction(
   if (key === "Tab") return "move-focus";
   return null;
 }
+
+type DialogFocusTarget = {
+  isConnected: boolean;
+  matches: (selectors: string) => boolean;
+};
+
+function isAvailableDialogFocusTarget(
+  target: DialogFocusTarget | null,
+): target is DialogFocusTarget {
+  return Boolean(
+    target?.isConnected &&
+      !target.matches(':disabled,[aria-disabled="true"],[inert] *'),
+  );
+}
+
+export function chooseDialogRestoreTarget<T extends DialogFocusTarget>(
+  previouslyFocused: T | null,
+  confirmedFallback: T | null,
+  confirmed: boolean,
+): T | null {
+  const candidates = confirmed
+    ? [confirmedFallback, previouslyFocused]
+    : [previouslyFocused, confirmedFallback];
+  return candidates.find(isAvailableDialogFocusTarget) ?? null;
+}

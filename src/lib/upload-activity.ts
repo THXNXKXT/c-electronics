@@ -4,6 +4,11 @@ export type UploadActivityTracker = {
   dispose: () => void;
 };
 
+export type UploadBusyCounter = {
+  setSourceActive: (source: string, active: boolean) => void;
+  dispose: () => void;
+};
+
 export function createUploadActivityTracker(
   notify: (uploading: boolean) => void,
 ): UploadActivityTracker {
@@ -27,6 +32,28 @@ export function createUploadActivityTracker(
       if (!active) return;
       active = false;
       notify(false);
+    },
+  };
+}
+
+export function createUploadBusyCounter(
+  notify: (uploading: boolean) => void,
+): UploadBusyCounter {
+  const activeSources = new Set<string>();
+  let disposed = false;
+
+  return {
+    setSourceActive(source, active) {
+      if (disposed) return;
+      const wasBusy = activeSources.size > 0;
+      if (active) activeSources.add(source);
+      else activeSources.delete(source);
+      const isBusy = activeSources.size > 0;
+      if (wasBusy !== isBusy) notify(isBusy);
+    },
+    dispose() {
+      disposed = true;
+      activeSources.clear();
     },
   };
 }

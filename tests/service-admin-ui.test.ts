@@ -5,6 +5,7 @@ import {
   isServicePublicationBlocked,
   isServiceFormBusy,
   serializeServiceEditorState,
+  shouldAcknowledgeServiceSave,
 } from "../src/lib/service-admin-ui";
 
 test("service editor serialization omits blank rows but preserves partial rows for validation", () => {
@@ -74,4 +75,9 @@ test("dirty editor state blocks publish but not unpublish", () => {
   assert.equal(isServicePublicationBlocked("publish", false, false), false);
   assert.equal(isServicePublicationBlocked("unpublish", true, false), false);
   assert.equal(isServicePublicationBlocked("publish", false, true), true);
+});
+
+test("save acknowledgement never clears edits newer than its snapshot", () => {
+  assert.equal(shouldAcknowledgeServiceSave(4, 4), true);
+  assert.equal(shouldAcknowledgeServiceSave(4, 5), false);
 });

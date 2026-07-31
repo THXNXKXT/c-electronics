@@ -7,6 +7,7 @@ import {
 } from "@/lib/service-confirmations";
 import { getServiceRowActionAvailability } from "@/lib/service-admin-ui";
 import {
+  toSafeServiceClientError,
   unwrapServiceActionResult,
   type ServiceActionResult,
 } from "@/lib/service-action-result";
@@ -22,7 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   deleteDraftServiceAction,
   setServiceArchivedAction,
@@ -45,6 +46,7 @@ export function ServiceRowActions({
   const [confirmation, setConfirmation] =
     useState<ServiceConfirmationAction | null>(null);
   const [error, setError] = useState("");
+  const editLinkRef = useRef<HTMLAnchorElement>(null);
   const confirmationContent = confirmation
     ? getServiceConfirmation(confirmation, service.name)
     : null;
@@ -57,9 +59,7 @@ export function ServiceRowActions({
         unwrapServiceActionResult(await action());
         router.refresh();
       } catch (caught) {
-        setError(
-          caught instanceof Error ? caught.message : "ดำเนินการไม่สำเร็จ",
-        );
+        setError(toSafeServiceClientError(caught));
       }
     });
   }
@@ -94,6 +94,7 @@ export function ServiceRowActions({
     <>
       <div className={`flex justify-end gap-1 ${pending ? "opacity-50" : ""}`}>
         <Link
+          ref={editLinkRef}
           href={`/admin/services/${service.id}/edit`}
           aria-label={`แก้ไข ${service.name}`}
           className="rounded-lg p-2 text-subtle outline-none hover:bg-primary/5 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary"
@@ -177,6 +178,7 @@ export function ServiceRowActions({
         confirmLabel={confirmationContent?.confirmLabel}
         variant={confirmationContent?.variant}
         busy={pending}
+        confirmedRestoreFocusRef={editLinkRef}
         onConfirm={confirmTransition}
         onCancel={() => setConfirmation(null)}
       />

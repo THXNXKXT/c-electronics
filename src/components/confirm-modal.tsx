@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  chooseDialogRestoreTarget,
   getDialogKeyboardAction,
   getNextDialogFocusIndex,
 } from "@/lib/dialog-focus";
@@ -23,6 +24,7 @@ export function ConfirmModal({
   confirmLabel = "ลบ",
   variant = "danger",
   busy = false,
+  confirmedRestoreFocusRef,
   onConfirm,
   onCancel,
 }: {
@@ -32,17 +34,21 @@ export function ConfirmModal({
   confirmLabel?: string;
   variant?: "primary" | "warning" | "danger";
   busy?: boolean;
+  confirmedRestoreFocusRef?: React.RefObject<HTMLElement | null>;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const confirmedRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
+    confirmedRef.current = false;
     const previouslyFocused =
       document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
+    const confirmedRestoreFocus = confirmedRestoreFocusRef?.current ?? null;
     const focusTimer = window.setTimeout(() => {
       const firstFocusable =
         dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
@@ -51,9 +57,13 @@ export function ConfirmModal({
 
     return () => {
       window.clearTimeout(focusTimer);
-      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+      chooseDialogRestoreTarget(
+        previouslyFocused,
+        confirmedRestoreFocus,
+        confirmedRef.current,
+      )?.focus();
     };
-  }, [open]);
+  }, [confirmedRestoreFocusRef, open]);
 
   if (!open) return null;
 
@@ -142,7 +152,15 @@ export function ConfirmModal({
           <button type="button" disabled={busy} onClick={onCancel} className="flex-1 whitespace-nowrap rounded-full border border-black/10 bg-white py-2.5 text-sm font-semibold text-ink transition-colors hover:border-ink disabled:opacity-40">
             ยกเลิก
           </button>
-          <button type="button" disabled={busy} onClick={onConfirm} className={`flex-1 whitespace-nowrap rounded-full py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-50 ${tone.button}`}>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              confirmedRef.current = true;
+              onConfirm();
+            }}
+            className={`flex-1 whitespace-nowrap rounded-full py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-50 ${tone.button}`}
+          >
             {busy ? "กำลังดำเนินการ..." : confirmLabel}
           </button>
         </div>

@@ -74,3 +74,10 @@ export function isServicePublicationBlocked(
 ): boolean {
   return busy || (action === "publish" && editorDirty);
 }
+
+export function shouldAcknowledgeServiceSave(
+  submittedRevision: number,
+  currentRevision: number,
+): boolean {
+  return submittedRevision === currentRevision;
+}

@@ -4,9 +4,19 @@ import {
   SERVICE_ACTION_GENERIC_ERROR,
   ServiceUserFacingError,
   runAuthorizedServiceAction,
+  toSafeServiceClientError,
   toServiceActionFailure,
   unwrapServiceActionResult,
 } from "../src/lib/service-action-result";
+
+test("client errors preserve typed messages and hide unexpected details", () => {
+  const expected = new ServiceUserFacingError("ไม่พบบริการ");
+  assert.equal(toSafeServiceClientError(expected), expected.message);
+
+  const unexpected = new Error("auth token secret");
+  assert.equal(toSafeServiceClientError(unexpected), SERVICE_ACTION_GENERIC_ERROR);
+  assert.doesNotMatch(toSafeServiceClientError(unexpected), /auth|token|secret/i);
+});
 
 test("expected service failures preserve their Thai message without logging", () => {
   const logged: unknown[] = [];

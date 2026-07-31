@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  chooseDialogRestoreTarget,
   getDialogKeyboardAction,
   getNextDialogFocusIndex,
 } from "../src/lib/dialog-focus";
@@ -21,4 +22,24 @@ test("dialog keyboard actions distinguish Escape and Tab", () => {
   assert.equal(getDialogKeyboardAction("Escape"), "cancel");
   assert.equal(getDialogKeyboardAction("Tab"), "move-focus");
   assert.equal(getDialogKeyboardAction("Enter"), null);
+});
+
+test("confirmed dialog restores focus away from a trigger that becomes disabled", () => {
+  const disabledTrigger = {
+    isConnected: true,
+    matches: (selector: string) => selector.includes(":disabled"),
+  };
+  const enabledFallback = {
+    isConnected: true,
+    matches: () => false,
+  };
+
+  assert.equal(
+    chooseDialogRestoreTarget(disabledTrigger, enabledFallback, true),
+    enabledFallback,
+  );
+  assert.equal(
+    chooseDialogRestoreTarget(disabledTrigger, null, true),
+    null,
+  );
 });

@@ -9,11 +9,19 @@ import {
   type ServiceConfirmationAction,
 } from "@/lib/service-confirmations";
 import {
+  createUploadBusyCounter,
+  type UploadBusyCounter,
+} from "@/lib/upload-activity";
+import {
   isServiceFormBusy,
   isServicePublicationBlocked,
   serializeServiceEditorState,
+  shouldAcknowledgeServiceSave,
 } from "@/lib/service-admin-ui";
-import { unwrapServiceActionResult } from "@/lib/service-action-result";
+import {
+  toSafeServiceClientError,
+  unwrapServiceActionResult,
+} from "@/lib/service-action-result";
 import {
   slugifyServiceName,
   type ServiceFaq,
@@ -35,7 +43,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   createServiceAction,
   setServiceArchivedAction,
@@ -98,12 +106,36 @@ export function ServiceForm({
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
   const [dirty, setDirty] = useState(false);
-  const [imageUploading, setImageUploading] = useState(false);
+  const [uploadsPending, setUploadsPending] = useState(false);
+  const uploadCounterRef = useRef<UploadBusyCounter | null>(null);
+  const editorRevision = useRef(0);
+  const previewLinkRef = useRef<HTMLAnchorElement>(null);
   const [confirmation, setConfirmation] =
     useState<ServiceConfirmationAction | null>(null);
-  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
+  const [pendingSave, setPendingSave] = useState<{
+    formData: FormData;
+    revision: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const counter = createUploadBusyCounter(setUploadsPending);
+    uploadCounterRef.current = counter;
+    return () => {
+      counter.dispose();
+      if (uploadCounterRef.current === counter) uploadCounterRef.current = null;
+    };
+  }, []);
+
+  const handleCoverUploadingChange = useCallback((uploading: boolean) => {
+    uploadCounterRef.current?.setSourceActive("cover", uploading);
+  }, []);
+
+  const handleInlineUploadingChange = useCallback((uploading: boolean) => {
+    uploadCounterRef.current?.setSourceActive("inline", uploading);
+  }, []);
 
   function markDirty() {
+    editorRevision.current += 1;
     setDirty(true);
     setSaved("");
   }
@@ -115,9 +147,7 @@ export function ServiceForm({
       try {
         await action();
       } catch (caught) {
-        setError(
-          caught instanceof Error ? caught.message : "ดำเนินการไม่สำเร็จ",
-        );
+        setError(toSafeServiceClientError(caught));
       }
     });
   }
@@ -138,15 +168,22 @@ export function ServiceForm({
     return formData;
   }
 
-  function save(formData: FormData) {
+  function save(formData: FormData, submittedRevision: number) {
     runAction(async () => {
       const result = unwrapServiceActionResult(
         service
           ? await updateServiceAction(service.id, formData)
           : await createServiceAction(formData),
       );
-      setSaved("บันทึกแล้ว");
-      setDirty(false);
+      if (
+        shouldAcknowledgeServiceSave(submittedRevision, editorRevision.current)
+      ) {
+        setSaved("บันทึกแล้ว");
+        setDirty(false);
+      } else {
+        setSaved("");
+        setDirty(true);
+      }
 
       if (!service) {
         router.replace(`/admin/services/${result.id}/edit`);
@@ -158,7 +195,7 @@ export function ServiceForm({
 
   function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isServiceFormBusy(pending, imageUploading)) return;
+    if (isServiceFormBusy(pending, uploadsPending)) return;
     const formData = buildFormData(event.currentTarget);
     const nextSlug = slugifyServiceName(String(formData.get("slug") ?? ""));
 
@@ -166,12 +203,12 @@ export function ServiceForm({
       service?.publishedAt &&
       nextSlug !== slugifyServiceName(service.slug)
     ) {
-      setPendingFormData(formData);
+      setPendingSave({ formData, revision: editorRevision.current });
       setConfirmation("slug-change");
       return;
     }
 
-    save(formData);
+    save(formData, editorRevision.current);
   }
 
   function confirmTransition() {
@@ -180,9 +217,9 @@ export function ServiceForm({
     setConfirmation(null);
 
     if (action === "slug-change") {
-      const formData = pendingFormData;
-      setPendingFormData(null);
-      if (formData) save(formData);
+      const saveRequest = pendingSave;
+      setPendingSave(null);
+      if (saveRequest) save(saveRequest.formData, saveRequest.revision);
       return;
     }
 
@@ -200,7 +237,7 @@ export function ServiceForm({
     });
   }
 
-  const busy = isServiceFormBusy(pending, imageUploading);
+  const busy = isServiceFormBusy(pending, uploadsPending);
   const publicationAction =
     service?.status === "published" ? "unpublish" : "publish";
   const publicationBlocked = isServicePublicationBlocked(
@@ -269,6 +306,7 @@ export function ServiceForm({
           {service && (
             <>
               <Link
+                ref={previewLinkRef}
                 href={`/admin/services/${service.id}/preview`}
                 target="_blank"
                 className="flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2.5 text-sm font-semibold outline-none hover:border-ink focus-visible:ring-2 focus-visible:ring-primary"
@@ -326,7 +364,7 @@ export function ServiceForm({
             )}
             บันทึกร่าง
           </button>
-          {imageUploading && (
+          {uploadsPending && (
             <span
               role="status"
               className="self-center text-xs font-semibold text-primary"
@@ -425,6 +463,7 @@ export function ServiceForm({
             <ArticleRichTextEditor
               value={content}
               disabled={pending}
+              onUploadingChange={handleInlineUploadingChange}
               onChange={(nextContent) => {
                 setContent(nextContent);
                 markDirty();
@@ -779,7 +818,7 @@ export function ServiceForm({
                   setImagePublicId(publicId ?? "");
                   markDirty();
                 }}
-                onUploadingChange={setImageUploading}
+                onUploadingChange={handleCoverUploadingChange}
                 folder="c-electronics/services"
               />
             </div>
@@ -811,10 +850,11 @@ export function ServiceForm({
         confirmLabel={confirmationContent?.confirmLabel}
         variant={confirmationContent?.variant}
         busy={busy}
+        confirmedRestoreFocusRef={previewLinkRef}
         onConfirm={confirmTransition}
         onCancel={() => {
           setConfirmation(null);
-          setPendingFormData(null);
+          setPendingSave(null);
         }}
       />
     </form>

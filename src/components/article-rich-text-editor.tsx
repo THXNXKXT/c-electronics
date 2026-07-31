@@ -1,6 +1,10 @@
 "use client";
 
 import type { ArticleDocument } from "@/lib/articles";
+import {
+  createUploadActivityTracker,
+  type UploadActivityTracker,
+} from "@/lib/upload-activity";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -60,12 +64,17 @@ export function ArticleRichTextEditor({
   value,
   onChange,
   disabled = false,
+  onUploadingChange,
 }: {
   value: ArticleDocument;
   onChange: (value: ArticleDocument) => void;
   disabled?: boolean;
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(false);
+  const uploadingCallbackRef = useRef(onUploadingChange);
+  const uploadTrackerRef = useRef<UploadActivityTracker | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const editor = useEditor({
@@ -108,6 +117,24 @@ export function ArticleRichTextEditor({
   useEffect(() => {
     editor?.setEditable(!disabled);
   }, [disabled, editor]);
+
+  useEffect(() => {
+    uploadingCallbackRef.current = onUploadingChange;
+  }, [onUploadingChange]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    const tracker = createUploadActivityTracker((active) => {
+      uploadingCallbackRef.current?.(active);
+    });
+    uploadTrackerRef.current = tracker;
+
+    return () => {
+      mountedRef.current = false;
+      tracker.dispose();
+      if (uploadTrackerRef.current === tracker) uploadTrackerRef.current = null;
+    };
+  }, []);
 
   if (!editor) {
     return (
@@ -154,6 +181,7 @@ export function ArticleRichTextEditor({
       return;
     }
 
+    uploadTrackerRef.current?.start();
     setUploading(true);
     setUploadError("");
     try {
@@ -174,14 +202,19 @@ export function ArticleRichTextEditor({
         "/upload/",
         "/upload/f_auto,q_auto/",
       );
-      currentEditor.chain().focus().setImage({ src, alt: alt.trim() }).run();
+      if (mountedRef.current) {
+        currentEditor.chain().focus().setImage({ src, alt: alt.trim() }).run();
+      }
     } catch (error) {
-      setUploadError(
-        error instanceof Error ? error.message : "อัปโหลดรูปไม่สำเร็จ",
-      );
+      if (mountedRef.current) {
+        setUploadError(
+          error instanceof Error ? error.message : "อัปโหลดรูปไม่สำเร็จ",
+        );
+      }
     } finally {
-      setUploading(false);
-      if (fileInput.current) fileInput.current.value = "";
+      uploadTrackerRef.current?.finish();
+      if (mountedRef.current) setUploading(false);
+      if (mountedRef.current && fileInput.current) fileInput.current.value = "";
     }
   }
 

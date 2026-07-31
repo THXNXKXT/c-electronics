@@ -42,8 +42,14 @@ export async function runAuthorizedServiceAction<T extends object>(
 export function unwrapServiceActionResult<T extends object>(
   result: ServiceActionResult<T>,
 ): T {
-  if (!result.ok) throw new Error(result.error);
+  if (!result.ok) throw new ServiceUserFacingError(result.error);
   const data = { ...result } as Record<string, unknown>;
   delete data.ok;
   return data as T;
+}
+
+export function toSafeServiceClientError(error: unknown): string {
+  return error instanceof ServiceUserFacingError
+    ? error.message
+    : SERVICE_ACTION_GENERIC_ERROR;
 }
