@@ -15,6 +15,7 @@ import {
 import {
   Archive,
   ArchiveRestore,
+  ArrowLeft,
   ExternalLink,
   Loader2,
   Save,
@@ -100,9 +101,7 @@ export function ArticleForm({
       try {
         await action();
       } catch (caught) {
-        setError(
-          caught instanceof Error ? caught.message : "เกิดข้อผิดพลาด",
-        );
+        setError(caught instanceof Error ? caught.message : "เกิดข้อผิดพลาด");
       }
     });
   }
@@ -156,9 +155,9 @@ export function ArticleForm({
           {!embedded && (
             <Link
               href="/admin/articles"
-              className="text-sm font-semibold text-primary hover:underline"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors hover:text-ink"
             >
-              ← กลับไปหน้าบทความ
+              <ArrowLeft className="size-4" /> กลับ
             </Link>
           )}
           <h1
@@ -209,9 +208,7 @@ export function ArticleForm({
                 ) : (
                   <Send className="size-4" />
                 )}
-                {article.status === "published"
-                  ? "ยกเลิกเผยแพร่"
-                  : "เผยแพร่"}
+                {article.status === "published" ? "ยกเลิกเผยแพร่" : "เผยแพร่"}
               </button>
               <button
                 type="button"
@@ -371,7 +368,9 @@ export function ArticleForm({
                   className="mt-1 size-4 accent-primary"
                 />
                 <span>
-                  <strong className="block">ไม่ให้ search engine ทำ index</strong>
+                  <strong className="block">
+                    ไม่ให้ search engine ทำ index
+                  </strong>
                   <span className="text-xs text-muted">
                     หน้ายังเปิดดูได้ แต่ไม่อยู่ใน sitemap และใช้ noindex
                   </span>
@@ -440,11 +439,7 @@ export function ArticleForm({
               />
             </div>
             <input type="hidden" name="coverImage" value={coverImage} />
-            <input
-              type="hidden"
-              name="coverPublicId"
-              value={coverPublicId}
-            />
+            <input type="hidden" name="coverPublicId" value={coverPublicId} />
             <label className="mt-4 block text-xs font-bold text-muted">
               Alt text
               <input
