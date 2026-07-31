@@ -6,27 +6,14 @@ import { motion } from "framer-motion";
 import * as Icons from "lucide-react";
 import { MapPin, Award, Gift, ShieldCheck, Clock, ArrowRight, Package } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { getPublishedServiceHref, type ServiceStatus } from "@/lib/services";
+import type { PublicServiceCard } from "@/lib/service-queries";
+import { getPublishedServiceHref } from "@/lib/services";
 
 const reveal = {
   initial: { opacity: 0, y: 12 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { margin: "0px 0px 400px 0px" },
   transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
-};
-
-type Service = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  price: string | null;
-  icon: string | null;
-  image: string | null;
-  imageAlt: string | null;
-  status: ServiceStatus;
-  publishedAt: Date | null;
-  archived: boolean;
 };
 
 type Product = {
@@ -56,7 +43,7 @@ function getIcon(name: string | null): LucideIcon {
   return (Icons as unknown as Record<string, LucideIcon>)[name] ?? Icons.Wrench;
 }
 
-export function HomeClient({ services, products, articles }: { services: Service[]; products: Product[]; articles: Article[] }) {
+export function HomeClient({ services, products, articles }: { services: PublicServiceCard[]; products: Product[]; articles: Article[] }) {
   return (
     <>
       {/* ===== HERO ===== */}

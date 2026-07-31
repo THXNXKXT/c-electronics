@@ -1,8 +1,13 @@
 import type { MetadataRoute } from "next";
+import { sanitizeCanonical } from "./articles";
 
 type SitemapRow = {
   slug: string;
   updatedAt: Date;
+};
+
+type ServiceSitemapRow = SitemapRow & {
+  canonicalUrl?: string | null;
 };
 
 export function buildSitemapEntries({
@@ -15,10 +20,10 @@ export function buildSitemapEntries({
   baseUrl: string;
   now: Date;
   products: SitemapRow[];
-  services: SitemapRow[];
+  services: ServiceSitemapRow[];
   articles: SitemapRow[];
 }): MetadataRoute.Sitemap {
-  return [
+  const entries: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
       lastModified: now,
@@ -68,7 +73,9 @@ export function buildSitemapEntries({
       priority: 0.7,
     })),
     ...services.map((service) => ({
-      url: `${baseUrl}/services/${encodeURIComponent(service.slug)}`,
+      url:
+        sanitizeCanonical(service.canonicalUrl, baseUrl) ??
+        `${baseUrl}/services/${encodeURIComponent(service.slug)}`,
       lastModified: service.updatedAt,
       changeFrequency: "monthly" as const,
       priority: 0.8,
@@ -80,4 +87,11 @@ export function buildSitemapEntries({
       priority: 0.7,
     })),
   ];
+
+  const seen = new Set<string>();
+  return entries.filter((entry) => {
+    if (seen.has(entry.url)) return false;
+    seen.add(entry.url);
+    return true;
+  });
 }

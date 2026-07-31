@@ -10,7 +10,7 @@ import {
   normalizeArticleRouteSlug,
   resolveArticleSeo,
 } from "@/lib/articles";
-import { getPublishedServiceHref } from "@/lib/services";
+import { getRelatedServiceHref } from "@/lib/services";
 import { ArrowRight, BookOpen, Package, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -88,7 +88,7 @@ export default async function ArticleDetailPage({
   const toc = extractTableOfContents(article.content);
   const seo = resolveArticleSeo(article);
   const serviceHref = relations.service
-    ? getPublishedServiceHref(relations.service) ?? "/services"
+    ? getRelatedServiceHref(relations.service)
     : null;
   const articleUrl = `${SITE_URL}/articles/${encodeURIComponent(article.slug)}`;
   const structuredData = [

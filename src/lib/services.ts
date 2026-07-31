@@ -105,6 +105,15 @@ export function getPublishedServiceHref(input: {
   return `/services/${encodeURIComponent(input.slug)}`;
 }
 
+export function getRelatedServiceHref(input: {
+  slug: string;
+  status: ServiceStatus;
+  publishedAt: Date | null;
+  archived: boolean;
+}): string {
+  return getPublishedServiceHref(input) ?? "/services";
+}
+
 export function isIndexableService(input: {
   status: ServiceStatus;
   archived: boolean;

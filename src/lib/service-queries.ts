@@ -22,16 +22,45 @@ function publicServiceConditions() {
   ];
 }
 
+export type PublicServiceCard = Pick<
+  typeof services.$inferSelect,
+  | "id"
+  | "name"
+  | "slug"
+  | "description"
+  | "price"
+  | "icon"
+  | "image"
+  | "features"
+  | "imageAlt"
+  | "status"
+  | "archived"
+  | "publishedAt"
+>;
+
 export function buildPublicServiceCardsQuery() {
   return db
-    .select()
+    .select({
+      id: services.id,
+      name: services.name,
+      slug: services.slug,
+      description: services.description,
+      price: services.price,
+      icon: services.icon,
+      image: services.image,
+      features: services.features,
+      imageAlt: services.imageAlt,
+      status: services.status,
+      archived: services.archived,
+      publishedAt: services.publishedAt,
+    })
     .from(services)
     .where(eq(services.archived, false))
     .orderBy(desc(services.featured), services.name);
 }
 
 export async function listPublicServiceCards(): Promise<
-  Array<typeof services.$inferSelect>
+  PublicServiceCard[]
 > {
   return buildPublicServiceCardsQuery();
 }
@@ -152,13 +181,12 @@ export async function listArticleSlugsForService(
   return rows.map((row) => row.slug);
 }
 
-export async function getIndexableServicesForSitemap(): Promise<
-  Array<{ slug: string; updatedAt: Date }>
-> {
+export function buildIndexableServicesForSitemapQuery() {
   return db
     .select({
       slug: services.slug,
       updatedAt: services.updatedAt,
+      canonicalUrl: services.canonicalUrl,
     })
     .from(services)
     .where(
@@ -168,4 +196,10 @@ export async function getIndexableServicesForSitemap(): Promise<
       ),
     )
     .orderBy(desc(services.updatedAt));
+}
+
+export async function getIndexableServicesForSitemap(): Promise<
+  Array<{ slug: string; updatedAt: Date; canonicalUrl: string | null }>
+> {
+  return buildIndexableServicesForSitemapQuery();
 }

@@ -3,22 +3,8 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import * as Icons from "lucide-react";
-import { getPublishedServiceHref, type ServiceStatus } from "@/lib/services";
-
-type Service = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  price: string | null;
-  icon: string | null;
-  image: string | null;
-  imageAlt: string | null;
-  features: string | null;
-  status: ServiceStatus;
-  publishedAt: Date | null;
-  archived: boolean;
-};
+import type { PublicServiceCard } from "@/lib/service-queries";
+import { getPublishedServiceHref } from "@/lib/services";
 
 // ponytail: icon names come from DB as strings — resolve at render time
 function getIcon(name: string | null): Icons.LucideIcon {
@@ -27,7 +13,7 @@ function getIcon(name: string | null): Icons.LucideIcon {
   return Icon ?? Icons.Wrench;
 }
 
-export function ServicesClient({ services }: { services: Service[] }) {
+export function ServicesClient({ services }: { services: PublicServiceCard[] }) {
   return (
     <>
       <section className="border-b border-black/5 bg-canvas-muted">
