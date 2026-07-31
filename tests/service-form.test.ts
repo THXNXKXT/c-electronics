@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  completeLegacyServiceFormData,
-  parseServiceInput,
-} from "../src/lib/service-input";
+import { parseServiceInput } from "../src/lib/service-input";
 
 function validForm() {
   const form = new FormData();
@@ -182,72 +179,4 @@ test("rejects Cloudinary service images outside the owned folder", () => {
     );
     assert.throws(() => parseServiceInput(form), /Cloudinary/);
   });
-});
-
-test("completes legacy create and edit payloads without wiping rich metadata", () => {
-  const previousCloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = "demo";
-  try {
-  const createForm = new FormData();
-  createForm.set("name", "Legacy CCTV Service");
-  createForm.set(
-    "description",
-    "A sufficiently detailed legacy service description.",
-  );
-  completeLegacyServiceFormData(createForm);
-  const created = parseServiceInput(createForm);
-  assert.equal(created.slug, "legacy-cctv-service");
-  assert.deepEqual(created.processSteps, []);
-  assert.deepEqual(created.faqs, []);
-
-  const editForm = new FormData();
-  editForm.set("name", "Updated Legacy CCTV Service");
-  editForm.set(
-    "description",
-    "An updated and sufficiently detailed service description.",
-  );
-  editForm.set(
-    "image",
-    "https://res.cloudinary.com/demo/image/upload/v123/c-electronics/services/cctv.jpg",
-  );
-  completeLegacyServiceFormData(editForm, {
-    slug: "stable-service-slug",
-    icon: "Camera",
-    image:
-      "https://res.cloudinary.com/demo/image/upload/v123/c-electronics/services/cctv.jpg",
-    imageAlt: "กล้องวงจรปิด",
-    content: {
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: "Preserved rich body" }],
-        },
-      ],
-    },
-    processSteps: [{ title: "Survey", description: "Inspect the site" }],
-    faqs: [{ question: "Remote view?", answer: "Yes" }],
-    featured: true,
-    seoTitle: "Preserved SEO title",
-    seoDescription: "Preserved SEO description",
-    canonicalUrl: "/services/stable-service-slug",
-    noIndex: true,
-  });
-  const updated = parseServiceInput(editForm);
-  assert.equal(updated.slug, "stable-service-slug");
-  assert.equal(updated.content.content?.[0]?.content?.[0]?.text, "Preserved rich body");
-  assert.deepEqual(updated.processSteps, [
-    { title: "Survey", description: "Inspect the site" },
-  ]);
-  assert.equal(updated.imageAlt, "กล้องวงจรปิด");
-  assert.equal(updated.featured, true);
-  assert.equal(updated.seoTitle, "Preserved SEO title");
-  assert.equal(updated.noIndex, true);
-  } finally {
-    if (previousCloudName === undefined) {
-      delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-    } else {
-      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = previousCloudName;
-    }
-  }
 });

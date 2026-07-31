@@ -11,21 +11,6 @@ import {
   type ServiceProcessStep,
 } from "./services";
 
-export type LegacyServiceMetadata = {
-  slug: string;
-  icon: string;
-  image: string | null;
-  imageAlt: string | null;
-  content: ArticleDocument;
-  processSteps: ServiceProcessStep[];
-  faqs: ServiceFaq[];
-  featured: boolean;
-  seoTitle: string | null;
-  seoDescription: string | null;
-  canonicalUrl: string | null;
-  noIndex: boolean;
-};
-
 export type ServiceInput = {
   name: string;
   slug: string;
@@ -49,52 +34,6 @@ export type ServiceInput = {
 function optionalText(formData: FormData, key: string): string | null {
   const value = String(formData.get(key) ?? "").trim();
   return value || null;
-}
-
-function setIfMissing(formData: FormData, key: string, value: string) {
-  if (!formData.has(key)) formData.set(key, value);
-}
-
-export function completeLegacyServiceFormData(
-  formData: FormData,
-  existing?: LegacyServiceMetadata,
-): FormData {
-  setIfMissing(
-    formData,
-    "slug",
-    existing?.slug ?? String(formData.get("name") ?? ""),
-  );
-  setIfMissing(formData, "icon", existing?.icon ?? "Wrench");
-  setIfMissing(
-    formData,
-    "content",
-    JSON.stringify(
-      existing?.content ?? {
-        type: "doc",
-        content: [{ type: "paragraph", content: [] }],
-      },
-    ),
-  );
-  setIfMissing(
-    formData,
-    "processSteps",
-    JSON.stringify(existing?.processSteps ?? []),
-  );
-  setIfMissing(formData, "faqs", JSON.stringify(existing?.faqs ?? []));
-
-  if (existing) {
-    const submittedImage = String(formData.get("image") ?? "").trim();
-    if (submittedImage === (existing.image ?? "")) {
-      setIfMissing(formData, "imageAlt", existing.imageAlt ?? "");
-    }
-    setIfMissing(formData, "seoTitle", existing.seoTitle ?? "");
-    setIfMissing(formData, "seoDescription", existing.seoDescription ?? "");
-    setIfMissing(formData, "canonicalUrl", existing.canonicalUrl ?? "");
-    if (existing.featured) setIfMissing(formData, "featured", "on");
-    if (existing.noIndex) setIfMissing(formData, "noIndex", "on");
-  }
-
-  return formData;
 }
 
 export function deriveServiceImagePublicId(imageUrl: string): string | null {
