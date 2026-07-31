@@ -9,6 +9,34 @@ import {
 
 const publishedAt = new Date("2026-07-31T08:00:00.000Z");
 
+function enclosingHrefForImage(
+  node: React.ReactNode,
+  imageSrc: string,
+  ancestorHrefs: string[] = [],
+): string | null | undefined {
+  if (!React.isValidElement(node)) return undefined;
+  const props = node.props as {
+    children?: React.ReactNode;
+    href?: unknown;
+    src?: unknown;
+  };
+  const hrefs =
+    typeof props.href === "string"
+      ? [...ancestorHrefs, props.href]
+      : ancestorHrefs;
+
+  if (node.type === "img" && props.src === imageSrc) {
+    return hrefs.at(-1) ?? null;
+  }
+
+  for (const child of React.Children.toArray(props.children)) {
+    const result = enclosingHrefForImage(child, imageSrc, hrefs);
+    if (result !== undefined) return result;
+  }
+
+  return undefined;
+}
+
 test("builds a detail URL only for a currently published service", () => {
   assert.equal(
     getPublishedServiceHref({
@@ -152,7 +180,13 @@ test("home cards link published details and keep draft booking actions", async (
       articles: [],
     }),
   );
+  const tree = HomeClient({ services, products: [], articles: [] });
 
+  assert.equal(
+    enclosingHrefForImage(tree, "/published-home.webp"),
+    "/services/published-service",
+  );
+  assert.equal(enclosingHrefForImage(tree, "/draft-home.webp"), null);
   assert.match(markup, /href="\/services\/published-service"/);
   assert.equal(
     markup.match(/href="\/services\/published-service"/g)?.length,
