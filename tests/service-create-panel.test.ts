@@ -42,6 +42,10 @@ test("service create dropdown contains the same complete editor fields", async (
       `missing ${field}`,
     );
   }
+  assert.match(
+    markup,
+    /<input(?=[^>]*name="slug")(?=[^>]*maxLength="180")[^>]*>/,
+  );
 });
 
 test("service edit form keeps one editable row for every structured list", async () => {

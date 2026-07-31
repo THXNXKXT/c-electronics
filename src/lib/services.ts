@@ -36,7 +36,15 @@ const SERVICE_SLUG_CHANGE_CONFIRMATION_FIELD = "confirmSlugChange";
 const SERVICE_SLUG_CHANGE_CONFIRMATION_VALUE = "confirmed";
 const SERVICE_SLUG_CHANGE_EXPECTED_OLD_FIELD = "expectedOldSlug";
 const SERVICE_SLUG_CHANGE_EXPECTED_NEW_FIELD = "expectedNewSlug";
-const SERVICE_SLUG_CHANGE_MAX_LENGTH = 180;
+export const SERVICE_SLUG_MAX_LENGTH = 180;
+export const SERVICE_LEGACY_SLUG_MAX_LENGTH = 2_048;
+
+export function isServiceSlugStorageChange(
+  previousSlug: string,
+  nextSlug: string,
+): boolean {
+  return previousSlug !== nextSlug;
+}
 
 export type ServiceSlugChangeConfirmation = {
   expectedOldSlug: string;
@@ -49,22 +57,29 @@ function invalidServiceSlugChangeConfirmation(): never {
   );
 }
 
-function parseExpectedServiceSlug(value: FormDataEntryValue | null): string {
+function parseExpectedServiceSlug(
+  value: FormDataEntryValue | null,
+  maxLength: number,
+): string {
   if (typeof value !== "string") invalidServiceSlugChangeConfirmation();
-  const trimmed = value.trim();
-  if (!trimmed || trimmed.length > SERVICE_SLUG_CHANGE_MAX_LENGTH) {
+  if (!value || value.length > maxLength * 12) {
     invalidServiceSlugChangeConfirmation();
   }
 
-  const normalized = normalizeServiceRouteSlug(trimmed);
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch {
+    invalidServiceSlugChangeConfirmation();
+  }
   if (
-    !normalized ||
-    normalized.length > SERVICE_SLUG_CHANGE_MAX_LENGTH ||
-    /[/?#]/.test(normalized)
+    !decoded ||
+    decoded.length > maxLength ||
+    /[/?#]/.test(decoded)
   ) {
     invalidServiceSlugChangeConfirmation();
   }
-  return normalized;
+  return decoded;
 }
 
 export function parseServiceSlugChangeConfirmation(
@@ -81,8 +96,14 @@ export function parseServiceSlugChangeConfirmation(
   }
 
   return {
-    expectedOldSlug: parseExpectedServiceSlug(expectedOld),
-    expectedNewSlug: parseExpectedServiceSlug(expectedNew),
+    expectedOldSlug: parseExpectedServiceSlug(
+      expectedOld,
+      SERVICE_LEGACY_SLUG_MAX_LENGTH,
+    ),
+    expectedNewSlug: parseExpectedServiceSlug(
+      expectedNew,
+      SERVICE_SLUG_MAX_LENGTH,
+    ),
   };
 }
 
@@ -96,11 +117,11 @@ export function markServiceSlugChangeConfirmed(
   );
   formData.set(
     SERVICE_SLUG_CHANGE_EXPECTED_OLD_FIELD,
-    normalizeServiceRouteSlug(confirmation.expectedOldSlug),
+    confirmation.expectedOldSlug,
   );
   formData.set(
     SERVICE_SLUG_CHANGE_EXPECTED_NEW_FIELD,
-    normalizeServiceRouteSlug(confirmation.expectedNewSlug),
+    confirmation.expectedNewSlug,
   );
 }
 
@@ -110,9 +131,9 @@ export function assertServiceSlugChangeConfirmed(input: {
   publishedAt: Date | null;
   confirmation: ServiceSlugChangeConfirmation | null;
 }): void {
-  const previousSlug = normalizeServiceRouteSlug(input.previousSlug);
-  const nextSlug = normalizeServiceRouteSlug(input.nextSlug);
-  const slugChanged = previousSlug !== nextSlug;
+  const previousSlug = input.previousSlug;
+  const nextSlug = input.nextSlug;
+  const slugChanged = isServiceSlugStorageChange(previousSlug, nextSlug);
 
   if (input.confirmation) {
     if (

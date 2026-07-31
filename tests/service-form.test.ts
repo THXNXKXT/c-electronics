@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { ServiceUserFacingError } from "../src/lib/service-action-result";
 import { parseServiceInput } from "../src/lib/service-input";
+import { SERVICE_SLUG_MAX_LENGTH } from "../src/lib/services";
 
 function validForm() {
   const form = new FormData();
@@ -59,6 +60,12 @@ test("parser marks validation failures as safe for action transport", () => {
   const form = validForm();
   form.set("name", "x");
   assert.throws(() => parseServiceInput(form), ServiceUserFacingError);
+});
+
+test("service input rejects a final slug beyond the shared domain limit", () => {
+  const form = validForm();
+  form.set("slug", "ก".repeat(SERVICE_SLUG_MAX_LENGTH + 1));
+  assert.throws(() => parseServiceInput(form), /Slug.*180/);
 });
 
 test("rejects unsafe rich text and foreign canonical URLs", () => {

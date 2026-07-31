@@ -6,6 +6,7 @@ import {
   type ArticleDocument,
 } from "./articles";
 import {
+  SERVICE_SLUG_MAX_LENGTH,
   slugifyServiceName,
   type ServiceFaq,
   type ServiceProcessStep,
@@ -170,6 +171,11 @@ export function parseServiceInput(formData: FormData): ServiceInput {
 
   const slug = slugifyServiceName(requestedSlug || name);
   if (!slug) throw new ServiceUserFacingError("กรุณาระบุ slug บริการ");
+  if (slug.length > SERVICE_SLUG_MAX_LENGTH) {
+    throw new ServiceUserFacingError(
+      `Slug บริการต้องไม่เกิน ${SERVICE_SLUG_MAX_LENGTH} ตัวอักษร`,
+    );
+  }
 
   if (!isValidArticleDocument(rawContent)) {
     throw new ServiceUserFacingError("เนื้อหามี node, link หรือรูปภาพที่ระบบไม่รองรับ");

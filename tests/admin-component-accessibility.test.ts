@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ConfirmModal } from "../src/components/confirm-modal";
 import { ImageUpload } from "../src/components/image-upload";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { getServiceConfirmation } from "../src/lib/service-confirmations";
 
 test("confirmation dialog exposes its title and named close control", () => {
   const markup = renderToStaticMarkup(
@@ -21,6 +22,28 @@ test("confirmation dialog exposes its title and named close control", () => {
   assert.match(markup, /aria-modal="true"/);
   assert.match(markup, /aria-labelledby="confirm-modal-title"/);
   assert.match(markup, /aria-label="ปิดหน้าต่างยืนยัน"/);
+});
+
+test("slug confirmation visibly and safely renders the exact URL transition", () => {
+  const copy = getServiceConfirmation("slug-change", "บริการทดสอบ", {
+    oldSlug: "เดิม<script>alert(1)</script>",
+    newSlug: "ใหม่<img src=x>",
+  });
+  const markup = renderToStaticMarkup(
+    React.createElement(ConfirmModal, {
+      open: true,
+      ...copy,
+      onConfirm() {},
+      onCancel() {},
+    }),
+  );
+
+  assert.match(markup, /URL เดิม/);
+  assert.match(markup, /URL ใหม่/);
+  assert.match(markup, /เดิม&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(markup, /ใหม่&lt;img src=x&gt;/);
+  assert.match(markup, /→/);
+  assert.doesNotMatch(markup, /<script>|<img src=x>/);
 });
 
 test("image upload uses a keyboard button and names image removal", () => {

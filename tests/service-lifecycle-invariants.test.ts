@@ -4,10 +4,12 @@ import test from "node:test";
 import {
   assertServiceSlugChangeConfirmed,
   getServicePublicationMutation,
+  isServiceSlugStorageChange,
   markServiceSlugChangeConfirmed,
   parseServiceSlugChangeConfirmation,
   requireServiceActionBoolean,
   resolveServiceCanonicalAfterSlugChange,
+  SERVICE_SLUG_MAX_LENGTH,
 } from "../src/lib/services";
 
 test("service lifecycle actions reject non-boolean runtime inputs", () => {
@@ -103,7 +105,7 @@ test("exported lifecycle actions validate runtime inputs before database work", 
   assert.doesNotMatch(publicationBody, /archived:\s*publish\s*\?/);
 });
 
-test("slug-change confirmation binds normalized expected old and new slugs", () => {
+test("slug-change confirmation binds exact decoded old and new slugs", () => {
   const formData = new FormData();
   assert.equal(parseServiceSlugChangeConfirmation(formData), null);
 
@@ -123,7 +125,29 @@ test("slug-change confirmation binds normalized expected old and new slugs", () 
   });
 });
 
-test("malformed or unbounded slug-change confirmation fields reject", () => {
+test("confirmation decoding is strict but accepts valid encoded Thai slugs", () => {
+  const valid = new FormData();
+  valid.set("confirmSlugChange", "confirmed");
+  valid.set("expectedOldSlug", encodeURIComponent("บริการเดิม"));
+  valid.set("expectedNewSlug", encodeURIComponent("บริการใหม่"));
+  assert.deepEqual(parseServiceSlugChangeConfirmation(valid), {
+    expectedOldSlug: "บริการเดิม",
+    expectedNewSlug: "บริการใหม่",
+  });
+
+  for (const malformed of ["%E0%A4%A", "%", "บริการ%ใหม่"]) {
+    const formData = new FormData();
+    formData.set("confirmSlugChange", "confirmed");
+    formData.set("expectedOldSlug", malformed);
+    formData.set("expectedNewSlug", "บริการใหม่");
+    assert.throws(
+      () => parseServiceSlugChangeConfirmation(formData),
+      /ข้อมูลยืนยันการเปลี่ยน URL ไม่ถูกต้อง/,
+    );
+  }
+});
+
+test("confirmation target uses the shared slug limit while legacy old slugs get a bounded migration allowance", () => {
   const missing = new FormData();
   missing.set("confirmSlugChange", "confirmed");
   missing.set("expectedOldSlug", "บริการเดิม");
@@ -134,11 +158,72 @@ test("malformed or unbounded slug-change confirmation fields reject", () => {
 
   const oversized = new FormData();
   oversized.set("confirmSlugChange", "confirmed");
-  oversized.set("expectedOldSlug", "ก".repeat(181));
-  oversized.set("expectedNewSlug", "บริการใหม่");
+  oversized.set("expectedOldSlug", "บริการเดิม");
+  oversized.set("expectedNewSlug", "ก".repeat(SERVICE_SLUG_MAX_LENGTH + 1));
   assert.throws(
     () => parseServiceSlugChangeConfirmation(oversized),
     /ข้อมูลยืนยันการเปลี่ยน URL ไม่ถูกต้อง/,
+  );
+
+  const legacy = new FormData();
+  legacy.set("confirmSlugChange", "confirmed");
+  legacy.set("expectedOldSlug", "ก".repeat(2_048));
+  legacy.set("expectedNewSlug", "บริการใหม่");
+  assert.equal(
+    parseServiceSlugChangeConfirmation(legacy)?.expectedOldSlug.length,
+    2_048,
+  );
+  legacy.set("expectedOldSlug", "ก".repeat(2_049));
+  assert.throws(
+    () => parseServiceSlugChangeConfirmation(legacy),
+    /ข้อมูลยืนยันการเปลี่ยน URL ไม่ถูกต้อง/,
+  );
+});
+
+test("NFKC-equivalent storage rewrites still require an exact confirmation", () => {
+  const publishedAt = new Date("2026-07-31T03:00:00.000Z");
+  const storedSlug = "บริการ－เดิม";
+  const validatedTarget = "บริการ-เดิม";
+
+  assert.equal(
+    isServiceSlugStorageChange(storedSlug, validatedTarget),
+    true,
+  );
+  assert.equal(isServiceSlugStorageChange(storedSlug, storedSlug), false);
+
+  assert.throws(
+    () =>
+      assertServiceSlugChangeConfirmed({
+        previousSlug: storedSlug,
+        nextSlug: validatedTarget,
+        publishedAt,
+        confirmation: null,
+      }),
+    /ยืนยันการเปลี่ยน URL/,
+  );
+  assert.throws(
+    () =>
+      assertServiceSlugChangeConfirmed({
+        previousSlug: storedSlug,
+        nextSlug: validatedTarget,
+        publishedAt,
+        confirmation: {
+          expectedOldSlug: "บริการ-เดิม",
+          expectedNewSlug: validatedTarget,
+        },
+      }),
+    /ข้อมูลบริการเปลี่ยนแปลงแล้ว/,
+  );
+  assert.doesNotThrow(() =>
+    assertServiceSlugChangeConfirmed({
+      previousSlug: storedSlug,
+      nextSlug: validatedTarget,
+      publishedAt,
+      confirmation: {
+        expectedOldSlug: storedSlug,
+        expectedNewSlug: validatedTarget,
+      },
+    }),
   );
 });
 
@@ -299,6 +384,10 @@ test("slug modal marks one captured current FormData intent and blocks repeats",
   assert.match(
     source,
     /save\(\s*saveRequest\.formData,\s*saveRequest\.revision,[\s\S]*slugConfirmationSubmittingRef\.current = false[\s\S]*router\.refresh\(\)/,
+  );
+  assert.match(
+    source,
+    /getServiceConfirmation\([\s\S]*oldSlug:\s*pendingSave\.expectedOldSlug[\s\S]*newSlug:\s*pendingSave\.expectedNewSlug/,
   );
 });
 

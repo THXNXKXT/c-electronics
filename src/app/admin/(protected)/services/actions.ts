@@ -20,6 +20,7 @@ import {
   assertServiceSlugChangeConfirmed,
   canDeleteServicePermanently,
   getServicePublicationMutation,
+  isServiceSlugStorageChange,
   parseServiceSlugChangeConfirmation,
   requireServiceActionBoolean,
   resolveServiceCanonicalAfterSlugChange,
@@ -123,7 +124,10 @@ export async function updateServiceAction(
         .for("update");
 
       if (!lockedService) throw new ServiceUserFacingError("ไม่พบบริการ");
-      const slugChanged = lockedService.slug !== input.slug;
+      const slugChanged = isServiceSlugStorageChange(
+        lockedService.slug,
+        input.slug,
+      );
       assertServiceSlugChangeConfirmed({
         previousSlug: lockedService.slug,
         nextSlug: input.slug,
@@ -162,7 +166,9 @@ export async function updateServiceAction(
     });
 
     revalidateMutation(
-      current.slug === input.slug ? [current.slug] : [current.slug, input.slug],
+      isServiceSlugStorageChange(current.slug, input.slug)
+        ? [current.slug, input.slug]
+        : [current.slug],
       articleSlugs,
     );
     return { id, slug: input.slug };

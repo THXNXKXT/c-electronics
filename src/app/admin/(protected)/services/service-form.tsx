@@ -25,6 +25,8 @@ import {
 } from "@/lib/service-action-result";
 import {
   markServiceSlugChangeConfirmed,
+  SERVICE_SLUG_MAX_LENGTH,
+  isServiceSlugStorageChange,
   slugifyServiceName,
   type ServiceFaq,
   type ServiceProcessStep,
@@ -221,7 +223,7 @@ export function ServiceForm({
 
     if (
       service?.publishedAt &&
-      nextSlug !== slugifyServiceName(service.slug)
+      isServiceSlugStorageChange(service.slug, nextSlug)
     ) {
       setPendingSave({
         formData,
@@ -306,7 +308,16 @@ export function ServiceForm({
   });
   const confirmationContent =
     service && confirmation
-      ? getServiceConfirmation(confirmation, service.name)
+      ? getServiceConfirmation(
+          confirmation,
+          service.name,
+          confirmation === "slug-change" && pendingSave
+            ? {
+                oldSlug: pendingSave.expectedOldSlug,
+                newSlug: pendingSave.expectedNewSlug,
+              }
+            : undefined,
+        )
       : null;
 
   return (
@@ -476,6 +487,7 @@ export function ServiceForm({
               <input
                 name="slug"
                 required
+                maxLength={SERVICE_SLUG_MAX_LENGTH}
                 value={slug}
                 onChange={(event) => {
                   setSlugEdited(true);
