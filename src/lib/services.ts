@@ -50,6 +50,40 @@ export function normalizeServiceRouteSlug(input: string): string {
   }
 }
 
+export function normalizeServiceImageSource(input: string | null): string | null {
+  if (!input || input.startsWith("/")) return input;
+
+  try {
+    const imageUrl = new URL(input);
+    const siteUrl = new URL(SITE_URL);
+    if (
+      imageUrl.protocol === "https:" &&
+      imageUrl.hostname.toLocaleLowerCase() ===
+        siteUrl.hostname.toLocaleLowerCase()
+    ) {
+      const pathname = `/${imageUrl.pathname.replace(/^\/+/, "")}`;
+      return `${pathname}${imageUrl.search}`;
+    }
+  } catch {
+    return input;
+  }
+
+  return input;
+}
+
+export function resolveBookingServicePrefill(
+  requestedSlug: string | string[] | undefined,
+  availableServices: ReadonlyArray<{ slug: string; name: string }>,
+): string | null {
+  if (typeof requestedSlug !== "string") return null;
+  const slug = normalizeServiceRouteSlug(requestedSlug);
+  return (
+    availableServices.find(
+      (service) => normalizeServiceRouteSlug(service.slug) === slug,
+    )?.name ?? null
+  );
+}
+
 export function isIndexableService(input: {
   status: ServiceStatus;
   archived: boolean;

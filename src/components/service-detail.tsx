@@ -2,7 +2,10 @@ import { ArticleCard } from "@/components/article-card";
 import { ArticleContent } from "@/components/article-content";
 import type { services } from "@/db/schema";
 import type { PublishedArticleListItem } from "@/lib/article-queries";
-import { buildServiceStructuredData } from "@/lib/services";
+import {
+  buildServiceStructuredData,
+  normalizeServiceImageSource,
+} from "@/lib/services";
 import {
   ArrowRight,
   Check,
@@ -30,6 +33,7 @@ export function ServiceDetail({
     .filter(Boolean);
   const bookingHref = `/booking?service=${encodeURIComponent(service.slug)}`;
   const structuredData = buildServiceStructuredData(service);
+  const imageSource = normalizeServiceImageSource(service.image);
 
   return (
     <>
@@ -65,7 +69,7 @@ export function ServiceDetail({
 
             <div className="mt-9 grid items-end gap-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-12">
               <div>
-                <p className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                <p className="inline-flex items-center gap-2 text-sm font-semibold text-primary-active">
                   <Wrench className="size-4" aria-hidden="true" />
                   งานบริการโดยช่าง C.Electronics
                 </p>
@@ -83,12 +87,12 @@ export function ServiceDetail({
                 aria-label="ข้อมูลนัดหมายบริการ"
                 className="rounded-[20px] border border-black/5 bg-white p-5 shadow-[0_12px_36px_rgba(10,11,13,0.06)] sm:p-6"
               >
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-subtle">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted">
                   <ClipboardCheck className="size-4 text-primary" aria-hidden="true" />
                   ใบแจ้งงานบริการ
                 </div>
                 <div className="my-4 border-t border-dashed border-black/15" />
-                <p className="text-xs font-semibold text-subtle">ค่าบริการ</p>
+                <p className="text-xs font-semibold text-muted">ค่าบริการ</p>
                 <p className="mt-1 text-xl font-bold text-ink">
                   {service.price || "ประเมินตามหน้างาน"}
                 </p>
@@ -103,11 +107,11 @@ export function ServiceDetail({
           </div>
         </header>
 
-        {service.image && (
+        {imageSource && (
           <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 lg:px-8">
             <div className="relative aspect-[3/2] overflow-hidden rounded-[24px] bg-surface-tint sm:aspect-[2/1]">
               <Image
-                src={service.image}
+                src={imageSource}
                 alt={service.imageAlt || service.name}
                 fill
                 priority
@@ -149,7 +153,9 @@ export function ServiceDetail({
       {service.processSteps.length > 0 && (
         <section className="bg-canvas-muted py-14 sm:py-16">
           <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-            <p className="text-sm font-semibold text-primary">ลำดับการทำงาน</p>
+            <p className="text-sm font-semibold text-primary-active">
+              ลำดับการทำงาน
+            </p>
             <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
               ขั้นตอนบริการ
             </h2>
@@ -161,7 +167,7 @@ export function ServiceDetail({
                 >
                   <span
                     aria-hidden="true"
-                    className="flex size-11 items-center justify-center rounded-full bg-primary-tint text-sm font-bold text-primary"
+                    className="flex size-11 items-center justify-center rounded-full bg-primary-tint text-sm font-bold text-primary-active"
                   >
                     {String(index + 1).padStart(2, "0")}
                   </span>
@@ -180,7 +186,9 @@ export function ServiceDetail({
 
       {service.faqs.length > 0 && (
         <section className="mx-auto max-w-4xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
-          <p className="text-sm font-semibold text-primary">ก่อนนัดหมาย</p>
+          <p className="text-sm font-semibold text-primary-active">
+            ก่อนนัดหมาย
+          </p>
           <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
             คำถามที่พบบ่อย
           </h2>
@@ -208,14 +216,16 @@ export function ServiceDetail({
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-end justify-between gap-5">
               <div>
-                <p className="text-sm font-semibold text-primary">อ่านต่อ</p>
+                <p className="text-sm font-semibold text-primary-active">
+                  อ่านต่อ
+                </p>
                 <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
                   บทความสำหรับบริการนี้
                 </h2>
               </div>
               <Link
                 href="/articles"
-                className="hidden items-center gap-1 text-sm font-semibold text-primary sm:inline-flex"
+                className="hidden items-center gap-1 text-sm font-semibold text-primary-active sm:inline-flex"
               >
                 ดูบทความทั้งหมด <ArrowRight className="size-4" aria-hidden="true" />
               </Link>

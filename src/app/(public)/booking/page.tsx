@@ -1,16 +1,34 @@
 import { db } from "@/db";
-import { services, settings } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { settings } from "@/db/schema";
+import { listPublicServiceCards } from "@/lib/service-queries";
+import { resolveBookingServicePrefill } from "@/lib/services";
 import { BookingClient } from "./booking-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function BookingPage() {
-  const allServices = await db.select().from(services).where(eq(services.archived, false)).orderBy(services.createdAt);
-  const [s] = await db.select().from(settings).limit(1);
+export default async function BookingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ service?: string | string[] }>;
+}) {
+  const [params, allServices, settingsRows] = await Promise.all([
+    searchParams,
+    listPublicServiceCards(),
+    db.select().from(settings).limit(1),
+  ]);
 
   const serviceTypes = allServices.map((s) => s.name);
-  const phone = s?.phone || "0XX-XXX-XXXX";
+  const initialServiceType = resolveBookingServicePrefill(
+    params.service,
+    allServices,
+  );
+  const phone = settingsRows[0]?.phone || "0XX-XXX-XXXX";
 
-  return <BookingClient serviceTypes={serviceTypes} phone={phone} />;
+  return (
+    <BookingClient
+      serviceTypes={serviceTypes}
+      phone={phone}
+      initialServiceType={initialServiceType}
+    />
+  );
 }

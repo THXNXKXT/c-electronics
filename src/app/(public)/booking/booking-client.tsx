@@ -11,11 +11,24 @@ const trustBadges = [{icon:ShieldCheck,label:"ฟรีประเมิน"},{
 
 function genRef() { return "CE-" + Math.random().toString(36).slice(2, 8).toUpperCase(); }
 
-export function BookingClient({ serviceTypes, phone }: { serviceTypes: string[]; phone: string }) {
+export function BookingClient({
+  serviceTypes,
+  phone,
+  initialServiceType,
+}: {
+  serviceTypes: string[];
+  phone: string;
+  initialServiceType: string | null;
+}) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [refNo, setRefNo] = useState("");
-  const [valid, setValid] = useState({ name: false, phone: false, serviceType: false, district: false });
+  const [valid, setValid] = useState({
+    name: false,
+    phone: false,
+    serviceType: Boolean(initialServiceType),
+    district: false,
+  });
   const checkPhone = (v: string) => /^0\d{8,9}$/.test(v.replace(/[-\s]/g, ""));
 
   if (submitted) {
@@ -63,7 +76,7 @@ export function BookingClient({ serviceTypes, phone }: { serviceTypes: string[];
             <h2 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-subtle"><Wrench className="size-4 text-primary" /> รายละเอียดงาน</h2>
             <div className="space-y-5 border-l-2 border-primary/20 pl-5">
               <div><label className="mb-1.5 block text-sm font-semibold">ประเภทบริการ</label>
-                <select name="serviceType" required onChange={(e) => setValid((v) => ({ ...v, serviceType: !!e.target.value }))} className="w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary">
+                <select name="serviceType" required defaultValue={initialServiceType ?? ""} onChange={(e) => setValid((v) => ({ ...v, serviceType: !!e.target.value }))} className="w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary">
                   <option value="">เลือกประเภทบริการ...</option>
                   {serviceTypes.map((t) => (<option key={t} value={t}>{t}</option>))}
                 </select>
