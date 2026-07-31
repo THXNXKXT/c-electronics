@@ -105,6 +105,21 @@ export function deriveServiceImagePublicId(imageUrl: string): string | null {
   const uploadIndex = segments.findIndex(
     (segment, index) => segment === "upload" && segments[index - 1] === "image",
   );
+  const configuredCloudName =
+    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim();
+  let imageCloudName: string;
+  try {
+    imageCloudName = decodeURIComponent(segments[0] ?? "");
+  } catch {
+    throw new Error("รูป Cloudinary ของบริการไม่ถูกต้อง");
+  }
+  if (
+    !configuredCloudName ||
+    uploadIndex !== 2 ||
+    imageCloudName !== configuredCloudName
+  ) {
+    throw new Error("รูป Cloudinary ต้องเป็นของบัญชีเว็บไซต์นี้เท่านั้น");
+  }
   const versionIndex = segments.findIndex(
     (segment, index) => index > uploadIndex && /^v\d+$/.test(segment),
   );

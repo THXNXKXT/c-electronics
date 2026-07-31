@@ -106,32 +106,88 @@ test("rejects malformed nested rich text with the Thai content error", () => {
   assert.throws(() => parseServiceInput(form), /เนื้อหา/);
 });
 
-test("derives an owned Cloudinary public ID and ignores submitted IDs", () => {
-  const form = validForm();
-  form.set(
-    "image",
-    "https://res.cloudinary.com/demo/image/upload/f_auto,q_auto/v123/c-electronics/services/cctv.cover.jpg",
-  );
-  form.set("imagePublicId", "c-electronics/services/unrelated-victim");
-  assert.equal(
-    parseServiceInput(form).imagePublicId,
-    "c-electronics/services/cctv.cover",
-  );
+function withCloudinaryCloudName<T>(
+  cloudName: string | undefined,
+  operation: () => T,
+): T {
+  const previous = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  try {
+    if (cloudName === undefined) {
+      delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    } else {
+      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = cloudName;
+    }
+    return operation();
+  } finally {
+    if (previous === undefined) {
+      delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    } else {
+      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = previous;
+    }
+  }
+}
 
-  const outsideFolder = validForm();
-  outsideFolder.set(
-    "image",
-    "https://res.cloudinary.com/demo/image/upload/v123/other-folder/victim.jpg",
-  );
-  assert.throws(() => parseServiceInput(outsideFolder), /Cloudinary/);
+test("derives a public ID only for the configured Cloudinary account", () => {
+  withCloudinaryCloudName("site-cloud", () => {
+    const form = validForm();
+    form.set(
+      "image",
+      "https://res.cloudinary.com/site-cloud/image/upload/f_auto,q_auto/v123/c-electronics/services/cctv.cover.jpg",
+    );
+    form.set("imagePublicId", "c-electronics/services/unrelated-victim");
+    assert.equal(
+      parseServiceInput(form).imagePublicId,
+      "c-electronics/services/cctv.cover",
+    );
+  });
+});
 
-  const local = validForm();
-  local.set("image", "/images/service.jpg");
-  local.set("imagePublicId", "c-electronics/services/unrelated-victim");
-  assert.equal(parseServiceInput(local).imagePublicId, null);
+test("rejects a service image owned by a foreign Cloudinary account", () => {
+  withCloudinaryCloudName("site-cloud", () => {
+    const form = validForm();
+    form.set(
+      "image",
+      "https://res.cloudinary.com/foreign-cloud/image/upload/v123/c-electronics/services/victim.jpg",
+    );
+    assert.throws(() => parseServiceInput(form), /Cloudinary/);
+  });
+});
+
+test("missing Cloudinary configuration cannot authorize a deletable ID", () => {
+  withCloudinaryCloudName(undefined, () => {
+    const form = validForm();
+    form.set(
+      "image",
+      "https://res.cloudinary.com/site-cloud/image/upload/v123/c-electronics/services/victim.jpg",
+    );
+    assert.throws(() => parseServiceInput(form), /Cloudinary/);
+  });
+});
+
+test("site-local service images always have a null public ID", () => {
+  withCloudinaryCloudName(undefined, () => {
+    const form = validForm();
+    form.set("image", "/images/service.jpg");
+    form.set("imagePublicId", "c-electronics/services/unrelated-victim");
+    assert.equal(parseServiceInput(form).imagePublicId, null);
+  });
+});
+
+test("rejects Cloudinary service images outside the owned folder", () => {
+  withCloudinaryCloudName("site-cloud", () => {
+    const form = validForm();
+    form.set(
+      "image",
+      "https://res.cloudinary.com/site-cloud/image/upload/v123/other-folder/victim.jpg",
+    );
+    assert.throws(() => parseServiceInput(form), /Cloudinary/);
+  });
 });
 
 test("completes legacy create and edit payloads without wiping rich metadata", () => {
+  const previousCloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = "demo";
+  try {
   const createForm = new FormData();
   createForm.set("name", "Legacy CCTV Service");
   createForm.set(
@@ -187,4 +243,11 @@ test("completes legacy create and edit payloads without wiping rich metadata", (
   assert.equal(updated.featured, true);
   assert.equal(updated.seoTitle, "Preserved SEO title");
   assert.equal(updated.noIndex, true);
+  } finally {
+    if (previousCloudName === undefined) {
+      delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    } else {
+      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = previousCloudName;
+    }
+  }
 });
