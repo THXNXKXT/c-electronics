@@ -35,8 +35,8 @@ const expectedSafetyThemes: Record<string, string[]> = {
 };
 
 const expectedAltSubjects: Record<string, string[]> = {
-  air: ["คอยล์ร้อน", "ผนัง", "ภายนอก"],
-  cctv: ["ถนน", "อาคาร", "กล้องวงจรปิด"],
+  air: ["ช่าง", "ถุงมือ", "เครื่องปรับอากาศแบบติดผนัง", "ตรวจ"],
+  cctv: ["ช่าง", "บันได", "กล้องโดม", "ชายคา", "ติดตั้ง"],
   electrical: ["ตู้เบรกเกอร์", "อุปกรณ์ตัดวงจร"],
   satellite: ["จานดาวเทียม", "หัวรับ", "ดาดฟ้า"],
   appliance: ["แผงวงจร", "หัวแร้ง", "มัลติมิเตอร์"],
@@ -106,7 +106,10 @@ test("ships exactly six distinct, substantial, valid Thai service drafts", () =>
     assert.equal(new Set(seed.processSteps.map((step) => step.title)).size, seed.processSteps.length);
     assert.equal(new Set(seed.faqs.map((faq) => faq.question)).size, seed.faqs.length);
     assert.ok(seed.imageAlt.length >= 20, `${seed.key} needs descriptive image alt`);
-    assert.doesNotMatch(seed.imageAlt, /เชียงราย|ช่าง|เทคนิค|บุคคล/);
+    assert.doesNotMatch(seed.imageAlt, /เชียงราย/);
+    if (seed.key !== "air" && seed.key !== "cctv") {
+      assert.doesNotMatch(seed.imageAlt, /ช่าง|เทคนิค|บุคคล/);
+    }
     for (const subject of expectedAltSubjects[seed.key]) {
       assert.ok(seed.imageAlt.includes(subject), `${seed.key} alt is missing: ${subject}`);
     }
