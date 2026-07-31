@@ -46,6 +46,10 @@ test("normalizes every accepted service image form for next/image", () => {
     normalizeImage("/images/services/air.jpg"),
     "/images/services/air.jpg",
   );
+  assert.equal(
+    normalizeImage("//images/services/air.jpg"),
+    "/images/services/air.jpg",
+  );
   assert.equal(normalizeImage(null), null);
 });
 

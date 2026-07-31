@@ -51,7 +51,10 @@ export function normalizeServiceRouteSlug(input: string): string {
 }
 
 export function normalizeServiceImageSource(input: string | null): string | null {
-  if (!input || input.startsWith("/")) return input;
+  if (!input) return input;
+  if (input.startsWith("/")) {
+    return `/${input.replace(/^\/+/, "")}`;
+  }
 
   try {
     const imageUrl = new URL(input);
