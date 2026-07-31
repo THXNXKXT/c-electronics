@@ -9,11 +9,13 @@ export function buildSitemapEntries({
   baseUrl,
   now,
   products,
+  services,
   articles,
 }: {
   baseUrl: string;
   now: Date;
   products: SitemapRow[];
+  services: SitemapRow[];
   articles: SitemapRow[];
 }): MetadataRoute.Sitemap {
   return [
@@ -64,6 +66,12 @@ export function buildSitemapEntries({
       lastModified: product.updatedAt,
       changeFrequency: "weekly" as const,
       priority: 0.7,
+    })),
+    ...services.map((service) => ({
+      url: `${baseUrl}/services/${encodeURIComponent(service.slug)}`,
+      lastModified: service.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
     })),
     ...articles.map((article) => ({
       url: `${baseUrl}/articles/${encodeURIComponent(article.slug)}`,

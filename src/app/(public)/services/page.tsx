@@ -1,16 +1,10 @@
-import { db } from "@/db";
-import { services } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { listPublicServiceCards } from "@/lib/service-queries";
 import { ServicesClient } from "./services-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function ServicesPage() {
-  const allServices = await db
-    .select()
-    .from(services)
-    .where(eq(services.archived, false))
-    .orderBy(services.createdAt);
+  const allServices = await listPublicServiceCards();
 
   return <ServicesClient services={allServices} />;
 }

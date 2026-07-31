@@ -88,6 +88,23 @@ export function resolveBookingServicePrefill(
   );
 }
 
+export function getPublishedServiceHref(input: {
+  slug: string;
+  status: ServiceStatus;
+  publishedAt: Date | null;
+  archived: boolean;
+}): string | null {
+  if (
+    input.status !== "published" ||
+    input.publishedAt === null ||
+    input.archived
+  ) {
+    return null;
+  }
+
+  return `/services/${encodeURIComponent(input.slug)}`;
+}
+
 export function isIndexableService(input: {
   status: ServiceStatus;
   archived: boolean;

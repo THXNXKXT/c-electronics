@@ -113,6 +113,9 @@ export async function getArticleRelations(articleId: string) {
         description: services.description,
         price: services.price,
         image: services.image,
+        status: services.status,
+        publishedAt: services.publishedAt,
+        archived: services.archived,
       })
       .from(articles)
       .innerJoin(services, eq(articles.relatedServiceId, services.id))

@@ -3,15 +3,21 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import * as Icons from "lucide-react";
+import { getPublishedServiceHref, type ServiceStatus } from "@/lib/services";
 
 type Service = {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   price: string | null;
   icon: string | null;
   image: string | null;
+  imageAlt: string | null;
   features: string | null;
+  status: ServiceStatus;
+  publishedAt: Date | null;
+  archived: boolean;
 };
 
 // ponytail: icon names come from DB as strings — resolve at render time
@@ -36,6 +42,16 @@ export function ServicesClient({ services }: { services: Service[] }) {
           {services.map((s, i) => {
             const Icon = getIcon(s.icon);
             const features = s.features ? s.features.split("|").filter(Boolean) : [];
+            const detailHref = getPublishedServiceHref(s);
+            const bookingHref = `/booking?service=${encodeURIComponent(s.slug)}`;
+            const image = s.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={s.image} alt={s.imageAlt || s.name} className="size-full object-cover" />
+            ) : (
+              <div className="flex size-full items-center justify-center">
+                <Icon className="size-12 text-primary" strokeWidth={1.5} />
+              </div>
+            );
             return (
               <motion.div
                 key={s.id}
@@ -45,19 +61,30 @@ export function ServicesClient({ services }: { services: Service[] }) {
                 transition={{ duration: 0.4, delay: i * 0.05 }}
                 className="overflow-hidden rounded-[20px] border border-black/5 bg-white sm:flex"
               >
-                <div className="aspect-video shrink-0 overflow-hidden bg-surface-tint sm:aspect-square sm:w-56 sm:flex-shrink-0">
-                  {s.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={s.image} alt={s.name} className="size-full object-cover" />
-                  ) : (
-                    <div className="flex size-full items-center justify-center">
-                      <Icon className="size-12 text-primary" strokeWidth={1.5} />
-                    </div>
-                  )}
-                </div>
+                {detailHref ? (
+                  <Link
+                    href={detailHref}
+                    aria-label={`ดูรายละเอียด ${s.name}`}
+                    className="aspect-video shrink-0 overflow-hidden bg-surface-tint sm:aspect-square sm:w-56 sm:flex-shrink-0"
+                  >
+                    {image}
+                  </Link>
+                ) : (
+                  <div className="aspect-video shrink-0 overflow-hidden bg-surface-tint sm:aspect-square sm:w-56 sm:flex-shrink-0">
+                    {image}
+                  </div>
+                )}
                 <div className="flex-1 p-6 sm:p-8">
                   <div className="flex items-start justify-between gap-4">
-                    <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{s.name}</h2>
+                    <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
+                      {detailHref ? (
+                        <Link href={detailHref} className="hover:text-primary">
+                          {s.name}
+                        </Link>
+                      ) : (
+                        s.name
+                      )}
+                    </h2>
                     {s.price && <span className="shrink-0 whitespace-nowrap rounded-full bg-primary-tint px-3 py-1 text-xs font-semibold text-primary">{s.price}</span>}
                   </div>
                   {s.description && <p className="mt-2 text-sm text-muted sm:text-base">{s.description}</p>}
@@ -70,7 +97,7 @@ export function ServicesClient({ services }: { services: Service[] }) {
                       ))}
                     </ul>
                   )}
-                  <Link href="/booking" className="mt-5 inline-block whitespace-nowrap rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover">
+                  <Link href={bookingHref} className="mt-5 inline-block whitespace-nowrap rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover">
                     จองบริการ →
                   </Link>
                 </div>

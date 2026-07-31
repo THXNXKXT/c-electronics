@@ -10,6 +10,7 @@ import {
   normalizeArticleRouteSlug,
   resolveArticleSeo,
 } from "@/lib/articles";
+import { getPublishedServiceHref } from "@/lib/services";
 import { ArrowRight, BookOpen, Package, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -86,6 +87,9 @@ export default async function ArticleDetailPage({
   ]);
   const toc = extractTableOfContents(article.content);
   const seo = resolveArticleSeo(article);
+  const serviceHref = relations.service
+    ? getPublishedServiceHref(relations.service) ?? "/services"
+    : null;
   const articleUrl = `${SITE_URL}/articles/${encodeURIComponent(article.slug)}`;
   const structuredData = [
     {
@@ -262,7 +266,7 @@ export default async function ArticleDetailPage({
             <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {relations.service && (
                 <Link
-                  href={`/services#${relations.service.slug}`}
+                  href={serviceHref!}
                   className="rounded-[20px] bg-white p-5 transition-transform hover:-translate-y-0.5"
                 >
                   <Wrench className="size-6 text-primary" />

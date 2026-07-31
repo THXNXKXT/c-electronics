@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import * as Icons from "lucide-react";
 import { MapPin, Award, Gift, ShieldCheck, Clock, ArrowRight, Package } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { getPublishedServiceHref, type ServiceStatus } from "@/lib/services";
 
 const reveal = {
   initial: { opacity: 0, y: 12 },
@@ -17,10 +18,15 @@ const reveal = {
 type Service = {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
   price: string | null;
   icon: string | null;
   image: string | null;
+  imageAlt: string | null;
+  status: ServiceStatus;
+  publishedAt: Date | null;
+  archived: boolean;
 };
 
 type Product = {
@@ -93,25 +99,49 @@ export function HomeClient({ services, products, articles }: { services: Service
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((s, i) => {
             const Icon = getIcon(s.icon);
+            const detailHref = getPublishedServiceHref(s);
+            const bookingHref = `/booking?service=${encodeURIComponent(s.slug)}`;
+            const serviceImage = s.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={s.image} alt={s.imageAlt || s.name} className="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            ) : (
+              <div className="flex h-48 items-center justify-center bg-surface-tint">
+                <Icon className="size-12 text-primary" strokeWidth={1.5} />
+              </div>
+            );
             return (
-              <motion.div key={s.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ margin: "0px 0px 300px 0px" }} transition={{ duration: 0.4, delay: i * 0.05 }} className="group cursor-pointer overflow-hidden rounded-[20px] border border-black/5 bg-white transition-[transform,box-shadow] duration-150 hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(56,113,193,0.1)]">
-                {s.image ? (
-                  <div className="relative h-48 overflow-hidden bg-surface-tint">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={s.image} alt={s.name} className="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                  </div>
+              <motion.div key={s.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ margin: "0px 0px 300px 0px" }} transition={{ duration: 0.4, delay: i * 0.05 }} className="group overflow-hidden rounded-[20px] border border-black/5 bg-white transition-[transform,box-shadow] duration-150 hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(56,113,193,0.1)]">
+                {detailHref ? (
+                  <Link
+                    href={detailHref}
+                    aria-label={`ดูรายละเอียด ${s.name}`}
+                    className="relative block h-48 overflow-hidden bg-surface-tint"
+                  >
+                    {serviceImage}
+                  </Link>
                 ) : (
-                  <div className="flex h-48 items-center justify-center bg-surface-tint">
-                    <Icon className="size-12 text-primary" strokeWidth={1.5} />
+                  <div className="relative h-48 overflow-hidden bg-surface-tint">
+                    {serviceImage}
                   </div>
                 )}
                 <div className="p-5 sm:p-6">
                   <div className="flex items-start justify-between">
-                    <h3 className="text-lg font-bold tracking-tight">{s.name}</h3>
+                    <h3 className="text-lg font-bold tracking-tight">
+                      {detailHref ? (
+                        <Link href={detailHref} className="hover:text-primary">
+                          {s.name}
+                        </Link>
+                      ) : (
+                        s.name
+                      )}
+                    </h3>
                     <span className="text-xs font-bold tabular-nums text-subtle">{String(i + 1).padStart(2, "0")}</span>
                   </div>
                   {s.description && <p className="mt-1.5 text-sm text-muted">{s.description}</p>}
                   {s.price && <p className="mt-3 text-sm font-semibold text-primary">{s.price}</p>}
+                  <Link href={bookingHref} className="mt-4 inline-flex text-sm font-semibold text-primary hover:text-primary-hover">
+                    จองบริการ →
+                  </Link>
                 </div>
               </motion.div>
             );
