@@ -123,8 +123,8 @@ test("home cards link published details and keep draft booking actions", async (
       description: null,
       price: null,
       icon: "Wrench",
-      image: null,
-      imageAlt: null,
+      image: "/published-home.webp",
+      imageAlt: "Published cover alt",
       features: null,
       status: "published" as const,
       publishedAt,
@@ -132,12 +132,12 @@ test("home cards link published details and keep draft booking actions", async (
     },
     {
       id: "draft",
-      name: "Draft",
+      name: "Draft fallback name",
       slug: "draft-service",
       description: null,
       price: null,
       icon: "Wrench",
-      image: null,
+      image: "/draft-home.webp",
       imageAlt: null,
       features: null,
       status: "draft" as const,
@@ -154,7 +154,17 @@ test("home cards link published details and keep draft booking actions", async (
   );
 
   assert.match(markup, /href="\/services\/published-service"/);
+  assert.equal(
+    markup.match(/href="\/services\/published-service"/g)?.length,
+    2,
+  );
   assert.doesNotMatch(markup, /href="\/services\/draft-service"/);
+  assert.match(markup, /<img[^>]+alt="Published cover alt"/);
+  assert.match(markup, /<img[^>]+alt="Draft fallback name"/);
+  assert.match(
+    markup,
+    /<a[^>]+href="\/services\/published-service"[^>]*>Published<\/a>/,
+  );
   assert.match(markup, /href="\/booking\?service=published-service"/);
   assert.match(markup, /href="\/booking\?service=draft-service"/);
   assert.doesNotMatch(markup, /\/services#/);

@@ -1,6 +1,91 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+test("normalizes only URL-equivalent sitemap path forms", async () => {
+  const { normalizeSitemapUrlIdentity } = await import(
+    "../src/lib/sitemap-entries"
+  );
+  const baseUrl = "https://www.c-electronics.online";
+
+  assert.equal(
+    normalizeSitemapUrlIdentity(
+      "HTTPS://WWW.C-ELECTRONICS.ONLINE:443/services/%66oo/%7ebar",
+      baseUrl,
+    ),
+    "https://www.c-electronics.online/services/foo/~bar",
+  );
+  assert.notEqual(
+    normalizeSitemapUrlIdentity(
+      "https://www.c-electronics.online/services/a%2fb",
+      baseUrl,
+    ),
+    normalizeSitemapUrlIdentity(
+      "https://www.c-electronics.online/services/a/b",
+      baseUrl,
+    ),
+  );
+  assert.notEqual(
+    normalizeSitemapUrlIdentity(
+      "https://www.c-electronics.online/services/foo?q=%66",
+      baseUrl,
+    ),
+    normalizeSitemapUrlIdentity(
+      "https://www.c-electronics.online/services/foo?q=f",
+      baseUrl,
+    ),
+  );
+});
+
+test("deduplicates equivalent service canonicals with the newest timestamp", async () => {
+  const { buildSitemapEntries } = await import("../src/lib/sitemap-entries");
+  const baseUrl = "https://www.c-electronics.online";
+  const now = new Date("2026-07-31T12:00:00.000Z");
+  const oldest = new Date("2026-07-28T08:00:00.000Z");
+  const newest = new Date("2026-07-31T10:00:00.000Z");
+  const middle = new Date("2026-07-30T09:00:00.000Z");
+  const services = [
+    { slug: "foo", updatedAt: oldest, canonicalUrl: "/services/foo" },
+    {
+      slug: "encoded-foo",
+      updatedAt: newest,
+      canonicalUrl:
+        "HTTPS://WWW.C-ELECTRONICS.ONLINE:443/services/%66oo#details",
+    },
+    { slug: "foo-copy", updatedAt: middle, canonicalUrl: "/services/foo" },
+    {
+      slug: "reserved-encoded",
+      updatedAt: middle,
+      canonicalUrl: "/services/a%2Fb",
+    },
+    { slug: "reserved-path", updatedAt: middle, canonicalUrl: "/services/a/b" },
+  ];
+  const build = (rows: typeof services) =>
+    buildSitemapEntries({
+      baseUrl,
+      now,
+      products: [],
+      services: rows,
+      articles: [],
+    });
+
+  for (const entries of [build(services), build([...services].reverse())]) {
+    const fooEntries = entries.filter(
+      (entry) => entry.url === `${baseUrl}/services/foo`,
+    );
+    assert.equal(fooEntries.length, 1);
+    assert.equal(fooEntries[0].lastModified, newest);
+    assert.equal(
+      entries.some((entry) => entry.url === `${baseUrl}/services/a%2Fb`),
+      true,
+    );
+    assert.equal(
+      entries.some((entry) => entry.url === `${baseUrl}/services/a/b`),
+      true,
+    );
+    assert.equal(entries.some((entry) => entry.url.includes("#")), false);
+  }
+});
+
 test("sitemap contains one canonical services page and no fragment URLs", async () => {
   const { buildSitemapEntries } = await import("../src/lib/sitemap-entries");
   const now = new Date("2026-07-31T12:00:00.000Z");
