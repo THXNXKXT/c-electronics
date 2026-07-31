@@ -81,3 +81,16 @@ export function shouldAcknowledgeServiceSave(
 ): boolean {
   return submittedRevision === currentRevision;
 }
+
+export function canSubmitServiceSlugChangeConfirmation(input: {
+  submittedRevision: number;
+  currentRevision: number;
+  busy: boolean;
+  alreadySubmitting: boolean;
+}): boolean {
+  return (
+    !input.busy &&
+    !input.alreadySubmitting &&
+    input.submittedRevision === input.currentRevision
+  );
+}

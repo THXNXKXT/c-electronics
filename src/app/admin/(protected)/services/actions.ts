@@ -17,7 +17,12 @@ import { parseServiceInput } from "@/lib/service-input";
 import { listArticleSlugsForService } from "@/lib/service-queries";
 import {
   assertServiceReadyForPublication,
+  assertServiceSlugChangeConfirmed,
   canDeleteServicePermanently,
+  getServicePublicationMutation,
+  hasServiceSlugChangeConfirmation,
+  requireServiceActionBoolean,
+  resolveServiceCanonicalAfterSlugChange,
 } from "@/lib/services";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -98,6 +103,7 @@ export async function updateServiceAction(
   formData: FormData,
 ): Promise<ServiceActionResult<{ id: string; slug: string }>> {
   return runAuthorizedServiceAction(requireAdmin, async () => {
+    const slugChangeConfirmed = hasServiceSlugChangeConfirmation(formData);
     const articleSlugs = await listArticleSlugsForService(id);
     const input = parseServiceInput(formData);
     const now = new Date();
@@ -117,6 +123,22 @@ export async function updateServiceAction(
 
       if (!lockedService) throw new ServiceUserFacingError("ไม่พบบริการ");
       const slugChanged = lockedService.slug !== input.slug;
+      const historicalRedirects = await tx
+        .select({ slug: serviceSlugRedirects.slug })
+        .from(serviceSlugRedirects)
+        .where(eq(serviceSlugRedirects.serviceId, id));
+      assertServiceSlugChangeConfirmed({
+        previousSlug: lockedService.slug,
+        nextSlug: input.slug,
+        publishedAt: lockedService.publishedAt,
+        confirmed: slugChangeConfirmed,
+      });
+      const resolvedCanonicalUrl = resolveServiceCanonicalAfterSlugChange({
+        canonicalUrl: input.canonicalUrl,
+        previousSlug: lockedService.slug,
+        nextSlug: input.slug,
+        historicalSlugs: historicalRedirects.map((redirect) => redirect.slug),
+      });
       await lockServiceSlugs(tx, [lockedService.slug, input.slug]);
 
       if (slugChanged) {
@@ -133,7 +155,7 @@ export async function updateServiceAction(
       }
       await tx
         .update(services)
-        .set({ ...input, updatedAt: now })
+        .set({ ...input, canonicalUrl: resolvedCanonicalUrl, updatedAt: now })
         .where(eq(services.id, id));
       return lockedService;
     });
@@ -148,9 +170,13 @@ export async function updateServiceAction(
 
 export async function setServicePublicationAction(
   id: string,
-  publish: boolean,
+  publishInput: unknown,
 ): Promise<ServiceActionResult> {
   return runAuthorizedServiceAction(requireAdmin, async () => {
+    const publish = requireServiceActionBoolean(
+      publishInput,
+      "ค่าการเผยแพร่",
+    );
     const articleSlugs = await listArticleSlugsForService(id);
     const now = new Date();
     const service = await withDatabaseTransaction(async (tx) => {
@@ -161,18 +187,17 @@ export async function setServicePublicationAction(
         .limit(1)
         .for("update");
       if (!lockedService) throw new ServiceUserFacingError("ไม่พบบริการ");
+      const publicationMutation = getServicePublicationMutation({
+        publish,
+        archived: lockedService.archived,
+        publishedAt: lockedService.publishedAt,
+        now,
+      });
       if (publish) assertServiceReadyForPublication(lockedService);
 
       await tx
         .update(services)
-        .set({
-          status: publish ? "published" : "draft",
-          publishedAt: publish
-            ? lockedService.publishedAt ?? now
-            : lockedService.publishedAt,
-          archived: publish ? false : lockedService.archived,
-          updatedAt: now,
-        })
+        .set(publicationMutation)
         .where(eq(services.id, id));
       return lockedService;
     });
@@ -184,9 +209,13 @@ export async function setServicePublicationAction(
 
 export async function setServiceArchivedAction(
   id: string,
-  archived: boolean,
+  archivedInput: unknown,
 ): Promise<ServiceActionResult> {
   return runAuthorizedServiceAction(requireAdmin, async () => {
+    const archived = requireServiceActionBoolean(
+      archivedInput,
+      "ค่าการเก็บถาวร",
+    );
     const articleSlugs = await listArticleSlugsForService(id);
     const service = await withDatabaseTransaction(async (tx) => {
       const [lockedService] = await tx

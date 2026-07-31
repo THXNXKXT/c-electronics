@@ -32,6 +32,113 @@ export type ServiceSeoInput = {
 
 export type ServiceContent = ArticleDocument;
 
+const SERVICE_SLUG_CHANGE_CONFIRMATION_FIELD = "confirmSlugChange";
+const SERVICE_SLUG_CHANGE_CONFIRMATION_VALUE = "confirmed";
+
+export function hasServiceSlugChangeConfirmation(formData: FormData): boolean {
+  return (
+    formData.get(SERVICE_SLUG_CHANGE_CONFIRMATION_FIELD) ===
+    SERVICE_SLUG_CHANGE_CONFIRMATION_VALUE
+  );
+}
+
+export function markServiceSlugChangeConfirmed(formData: FormData): void {
+  formData.set(
+    SERVICE_SLUG_CHANGE_CONFIRMATION_FIELD,
+    SERVICE_SLUG_CHANGE_CONFIRMATION_VALUE,
+  );
+}
+
+export function assertServiceSlugChangeConfirmed(input: {
+  previousSlug: string;
+  nextSlug: string;
+  publishedAt: Date | null;
+  confirmed: boolean;
+}): void {
+  if (
+    input.previousSlug !== input.nextSlug &&
+    input.publishedAt !== null &&
+    !input.confirmed
+  ) {
+    throw new ServiceUserFacingError(
+      "กรุณายืนยันการเปลี่ยน URL บริการที่เคยเผยแพร่แล้ว",
+    );
+  }
+}
+
+function serviceSlugFromCanonical(canonicalUrl: string): string | null {
+  try {
+    const pathname = new URL(canonicalUrl).pathname;
+    const prefix = "/services/";
+    if (!pathname.startsWith(prefix)) return null;
+    const encodedSlug = pathname.slice(prefix.length).replace(/\/+$/, "");
+    if (!encodedSlug || encodedSlug.includes("/")) return null;
+    const slug = decodeURIComponent(encodedSlug).normalize("NFKC");
+    return slug.includes("/") ? null : slug;
+  } catch {
+    return null;
+  }
+}
+
+export function resolveServiceCanonicalAfterSlugChange(input: {
+  canonicalUrl: string | null;
+  previousSlug: string;
+  nextSlug: string;
+  historicalSlugs: readonly string[];
+}): string | null {
+  const canonical = sanitizeCanonical(input.canonicalUrl);
+  if (!canonical) return null;
+
+  const targetSlug = serviceSlugFromCanonical(canonical);
+  if (!targetSlug) return canonical;
+
+  const normalizedTarget = normalizeServiceRouteSlug(targetSlug);
+  const targetsOldSelf =
+    normalizeServiceRouteSlug(input.previousSlug) !==
+      normalizeServiceRouteSlug(input.nextSlug) &&
+    normalizedTarget === normalizeServiceRouteSlug(input.previousSlug);
+  const targetsHistoricalSelf = input.historicalSlugs.some(
+    (slug) => normalizeServiceRouteSlug(slug) === normalizedTarget,
+  );
+
+  return targetsOldSelf || targetsHistoricalSelf ? null : canonical;
+}
+
+export function requireServiceActionBoolean(
+  value: unknown,
+  label: string,
+): boolean {
+  if (typeof value !== "boolean") {
+    throw new ServiceUserFacingError(`${label}ต้องเป็นค่า true หรือ false`);
+  }
+  return value;
+}
+
+export function getServicePublicationMutation(input: {
+  publish: boolean;
+  archived: boolean;
+  publishedAt: Date | null;
+  now: Date;
+}): {
+  status: ServiceStatus;
+  publishedAt: Date | null;
+  updatedAt: Date;
+} {
+  if (input.publish && input.archived) {
+    throw new ServiceUserFacingError(
+      "กรุณากู้คืนบริการก่อนเผยแพร่",
+    );
+  }
+
+  return {
+    status: input.publish ? "published" : "draft",
+    publishedAt: input.publish
+      ? input.publishedAt ?? input.now
+      : input.publishedAt,
+    updatedAt: input.now,
+  };
+}
+
 export function slugifyServiceName(input: string): string {
   const slug = input
     .normalize("NFKC")
@@ -174,11 +281,19 @@ export function resolveServiceSeo(input: ServiceSeoInput): {
   return {
     title: input.seoTitle?.trim() || input.name.trim(),
     description: clipDescription(input.seoDescription?.trim() || input.description || ""),
-    canonical:
-      sanitizeCanonical(input.canonicalUrl) ??
-      new URL(`/services/${encodeURIComponent(input.slug)}`, SITE_URL).toString(),
+    canonical: resolveServiceCanonical(input),
     indexable: isIndexableService(input),
   };
+}
+
+export function resolveServiceCanonical(
+  input: { slug: string; canonicalUrl?: string | null },
+  siteUrl = SITE_URL,
+): string {
+  return (
+    sanitizeCanonical(input.canonicalUrl, siteUrl) ??
+    new URL(`/services/${encodeURIComponent(input.slug)}`, siteUrl).toString()
+  );
 }
 
 export function canDeleteServicePermanently(input: {
@@ -191,19 +306,22 @@ export function canDeleteServicePermanently(input: {
 export function buildServiceStructuredData(input: {
   name: string;
   slug: string;
+  canonicalUrl: string;
   description: string | null;
   image: string | null;
   price: string | null;
   faqs: ServiceFaq[];
   updatedAt: Date;
 }): Array<Record<string, unknown>> {
-  const url = new URL(`/services/${encodeURIComponent(input.slug)}`, SITE_URL).toString();
+  const url = input.canonicalUrl;
   const description = input.description?.trim();
   const service: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Service",
+    "@id": url,
     name: input.name,
     url,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
     dateModified: input.updatedAt.toISOString(),
     provider: {
       "@type": "Organization",
@@ -225,6 +343,7 @@ export function buildServiceStructuredData(input: {
   const breadcrumb: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
+    "@id": `${url}#breadcrumb`,
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "หน้าแรก", item: SITE_URL },
       { "@type": "ListItem", position: 2, name: "บริการ", item: new URL("/services", SITE_URL).toString() },
@@ -240,6 +359,7 @@ export function buildServiceStructuredData(input: {
     {
       "@context": "https://schema.org",
       "@type": "FAQPage",
+      "@id": `${url}#faq`,
       mainEntity: input.faqs.map((faq) => ({
         "@type": "Question",
         name: faq.question,

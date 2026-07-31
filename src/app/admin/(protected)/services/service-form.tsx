@@ -13,6 +13,7 @@ import {
   type UploadBusyCounter,
 } from "@/lib/upload-activity";
 import {
+  canSubmitServiceSlugChangeConfirmation,
   isServiceFormBusy,
   isServicePublicationBlocked,
   serializeServiceEditorState,
@@ -23,6 +24,7 @@ import {
   unwrapServiceActionResult,
 } from "@/lib/service-action-result";
 import {
+  markServiceSlugChangeConfirmed,
   slugifyServiceName,
   type ServiceFaq,
   type ServiceProcessStep,
@@ -109,6 +111,7 @@ export function ServiceForm({
   const [uploadsPending, setUploadsPending] = useState(false);
   const uploadCounterRef = useRef<UploadBusyCounter | null>(null);
   const editorRevision = useRef(0);
+  const slugConfirmationSubmittingRef = useRef(false);
   const previewLinkRef = useRef<HTMLAnchorElement>(null);
   const [confirmation, setConfirmation] =
     useState<ServiceConfirmationAction | null>(null);
@@ -168,27 +171,38 @@ export function ServiceForm({
     return formData;
   }
 
-  function save(formData: FormData, submittedRevision: number) {
+  function save(
+    formData: FormData,
+    submittedRevision: number,
+    onSettled?: () => void,
+  ) {
     runAction(async () => {
-      const result = unwrapServiceActionResult(
-        service
-          ? await updateServiceAction(service.id, formData)
-          : await createServiceAction(formData),
-      );
-      if (
-        shouldAcknowledgeServiceSave(submittedRevision, editorRevision.current)
-      ) {
-        setSaved("บันทึกแล้ว");
-        setDirty(false);
-      } else {
-        setSaved("");
-        setDirty(true);
-      }
+      try {
+        const result = unwrapServiceActionResult(
+          service
+            ? await updateServiceAction(service.id, formData)
+            : await createServiceAction(formData),
+        );
+        if (
+          shouldAcknowledgeServiceSave(
+            submittedRevision,
+            editorRevision.current,
+          )
+        ) {
+          setSaved("บันทึกแล้ว");
+          setDirty(false);
+        } else {
+          setSaved("");
+          setDirty(true);
+        }
 
-      if (!service) {
-        router.replace(`/admin/services/${result.id}/edit`);
-      } else {
-        router.refresh();
+        if (!service) {
+          router.replace(`/admin/services/${result.id}/edit`);
+        } else {
+          router.refresh();
+        }
+      } finally {
+        onSettled?.();
       }
     });
   }
@@ -219,7 +233,25 @@ export function ServiceForm({
     if (action === "slug-change") {
       const saveRequest = pendingSave;
       setPendingSave(null);
-      if (saveRequest) save(saveRequest.formData, saveRequest.revision);
+      if (
+        !saveRequest ||
+        !canSubmitServiceSlugChangeConfirmation({
+          submittedRevision: saveRequest.revision,
+          currentRevision: editorRevision.current,
+          busy: isServiceFormBusy(pending, uploadsPending),
+          alreadySubmitting: slugConfirmationSubmittingRef.current,
+        })
+      ) {
+        if (saveRequest) {
+          setError("ข้อมูลมีการเปลี่ยนแปลง กรุณากดบันทึกและยืนยันอีกครั้ง");
+        }
+        return;
+      }
+      slugConfirmationSubmittingRef.current = true;
+      markServiceSlugChangeConfirmed(saveRequest.formData);
+      save(saveRequest.formData, saveRequest.revision, () => {
+        slugConfirmationSubmittingRef.current = false;
+      });
       return;
     }
 

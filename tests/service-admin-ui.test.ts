@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  canSubmitServiceSlugChangeConfirmation,
   getServiceRowActionAvailability,
   isServicePublicationBlocked,
   isServiceFormBusy,
@@ -80,4 +81,43 @@ test("dirty editor state blocks publish but not unpublish", () => {
 test("save acknowledgement never clears edits newer than its snapshot", () => {
   assert.equal(shouldAcknowledgeServiceSave(4, 4), true);
   assert.equal(shouldAcknowledgeServiceSave(4, 5), false);
+});
+
+test("slug confirmation submits only one current idle save snapshot", () => {
+  assert.equal(
+    canSubmitServiceSlugChangeConfirmation({
+      submittedRevision: 4,
+      currentRevision: 4,
+      busy: false,
+      alreadySubmitting: false,
+    }),
+    true,
+  );
+  assert.equal(
+    canSubmitServiceSlugChangeConfirmation({
+      submittedRevision: 4,
+      currentRevision: 5,
+      busy: false,
+      alreadySubmitting: false,
+    }),
+    false,
+  );
+  assert.equal(
+    canSubmitServiceSlugChangeConfirmation({
+      submittedRevision: 4,
+      currentRevision: 4,
+      busy: true,
+      alreadySubmitting: false,
+    }),
+    false,
+  );
+  assert.equal(
+    canSubmitServiceSlugChangeConfirmation({
+      submittedRevision: 4,
+      currentRevision: 4,
+      busy: false,
+      alreadySubmitting: true,
+    }),
+    false,
+  );
 });

@@ -5,6 +5,7 @@ import type { PublishedArticleListItem } from "@/lib/article-queries";
 import {
   buildServiceStructuredData,
   normalizeServiceImageSource,
+  resolveServiceCanonical,
 } from "@/lib/services";
 import {
   ArrowRight,
@@ -32,7 +33,12 @@ export function ServiceDetail({
     .map((feature) => feature.trim())
     .filter(Boolean);
   const bookingHref = `/booking?service=${encodeURIComponent(service.slug)}`;
-  const structuredData = buildServiceStructuredData(service);
+  const structuredData = preview
+    ? []
+    : buildServiceStructuredData({
+        ...service,
+        canonicalUrl: resolveServiceCanonical(service),
+      });
   const imageSource = normalizeServiceImageSource(service.image);
 
   return (

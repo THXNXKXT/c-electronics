@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { sanitizeCanonical } from "./articles";
+import { resolveServiceCanonical } from "./services";
 
 type SitemapRow = {
   slug: string;
@@ -115,9 +115,7 @@ export function buildSitemapEntries({
       priority: 0.7,
     })),
     ...services.map((service) => ({
-      url:
-        sanitizeCanonical(service.canonicalUrl, baseUrl) ??
-        `${baseUrl}/services/${encodeURIComponent(service.slug)}`,
+      url: resolveServiceCanonical(service, baseUrl),
       lastModified: service.updatedAt,
       changeFrequency: "monthly" as const,
       priority: 0.8,
