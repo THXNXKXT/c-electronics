@@ -1,18 +1,15 @@
 import { db } from "@/db";
 import { serviceSlugRedirects, services } from "@/db/schema";
 import {
+  normalizeServiceSeedSlug,
   planServiceDraftSeeds,
   validateSeededService,
 } from "@/lib/service-seed-data";
 
-function normalized(value: string): string {
-  return value.normalize("NFKC").toLocaleLowerCase("th");
-}
-
 function duplicates(values: string[]): string[] {
   const seen = new Set<string>();
   const repeated = new Set<string>();
-  for (const value of values.map(normalized)) {
+  for (const value of values.map(normalizeServiceSeedSlug)) {
     if (seen.has(value)) repeated.add(value);
     seen.add(value);
   }
@@ -29,9 +26,9 @@ async function main() {
   const plan = planServiceDraftSeeds(candidates, redirects);
   const currentSlugs = candidates.map((row) => row.slug);
   const redirectSlugs = redirects.map((row) => row.slug);
-  const currentSet = new Set(currentSlugs.map(normalized));
+  const currentSet = new Set(currentSlugs.map(normalizeServiceSeedSlug));
   const historicalOverlap = redirectSlugs
-    .map(normalized)
+    .map(normalizeServiceSeedSlug)
     .filter((slug) => currentSet.has(slug));
   const slugConflicts = [
     ...duplicates(currentSlugs),

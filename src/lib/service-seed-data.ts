@@ -132,7 +132,7 @@ const serviceDraftBlueprints: ServiceDraftBlueprint[] = [
     title: "บริการติดตั้ง ล้าง และซ่อมแอร์ในเชียงราย",
     description:
       "รับสำรวจ ติดตั้ง ล้าง และตรวจซ่อมเครื่องปรับอากาศ โดยพิจารณาขนาดห้อง ระบบไฟฟ้า แนวท่อ และการระบายน้ำจากหน้างานจริงในเชียงราย",
-    imageAlt: "ช่างเทคนิคกำลังตรวจระบบเครื่องปรับอากาศสำหรับบ้านในเชียงราย",
+    imageAlt: "คอยล์ร้อนเครื่องปรับอากาศติดตั้งบนผนังภายนอกอาคารพร้อมแนวท่อ",
     features: [
       "สำรวจขนาดห้องและภาระความร้อนก่อนเลือก BTU",
       "วางตำแหน่งคอยล์ แนวท่อ และทางระบายน้ำจากหน้างาน",
@@ -205,7 +205,7 @@ const serviceDraftBlueprints: ServiceDraftBlueprint[] = [
     title: "บริการออกแบบและติดตั้งกล้องวงจรปิดในเชียงราย",
     description:
       "ออกแบบและติดตั้งกล้องวงจรปิดสำหรับบ้านและธุรกิจในเชียงราย สำรวจมุมภาพ แสง ระบบเครือข่าย แนวสาย และระยะเวลาเก็บภาพก่อนเลือกอุปกรณ์",
-    imageAlt: "ช่างเทคนิคตรวจมุมภาพของระบบกล้องวงจรปิดที่ติดตั้งในเชียงราย",
+    imageAlt: "ภาพถนนและอาคารจากมุมมองของระบบกล้องวงจรปิด",
     features: [
       "สำรวจจุดเสี่ยงและมุมภาพทั้งกลางวันกลางคืน",
       "เลือกระบบ Analog, IP หรือ Wi‑Fi ตามหน้างาน",
@@ -278,7 +278,7 @@ const serviceDraftBlueprints: ServiceDraftBlueprint[] = [
     title: "บริการติดตั้งและตรวจระบบไฟฟ้าบ้านในเชียงราย",
     description:
       "ตรวจ ติดตั้ง และปรับปรุงระบบไฟฟ้าบ้านในเชียงราย ครอบคลุมโหลด วงจร สาย เบรกเกอร์ RCD และสายดิน พร้อมวัดผลก่อนส่งมอบ",
-    imageAlt: "ช่างไฟกำลังตรวจตู้ควบคุมระบบไฟฟ้าภายในบ้านในเชียงราย",
+    imageAlt: "ตู้เบรกเกอร์และอุปกรณ์ตัดวงจรของระบบไฟฟ้าภายในอาคาร",
     features: [
       "สำรวจโหลดและสภาพวงจรเดิมก่อนเสนอแนวทาง",
       "แยกวงจรและเลือกสายกับเบรกเกอร์ให้สัมพันธ์กัน",
@@ -351,7 +351,7 @@ const serviceDraftBlueprints: ServiceDraftBlueprint[] = [
     title: "บริการติดตั้งและแก้ปัญหาจานดาวเทียมในเชียงราย",
     description:
       "ติดตั้ง ปรับ และตรวจปัญหาจานดาวเทียมในเชียงราย สำรวจแนวรับสัญญาณ จุดยึด หัวรับ สาย และสภาพอากาศ พร้อมวัดคุณภาพก่อนส่งมอบ",
-    imageAlt: "จานดาวเทียมเด่นในภาพขณะช่างเทคนิคกำลังปรับสัญญาณบนดาดฟ้า",
+    imageAlt: "จานดาวเทียมพร้อมหัวรับและสายสัญญาณติดตั้งบนดาดฟ้า",
     features: [
       "สำรวจแนวรับสัญญาณและสิ่งกีดขวางก่อนติดตั้ง",
       "ประเมินฐาน จุดยึด และความปลอดภัยของพื้นที่สูง",
@@ -424,7 +424,7 @@ const serviceDraftBlueprints: ServiceDraftBlueprint[] = [
     title: "บริการตรวจและซ่อมเครื่องใช้ไฟฟ้าในเชียงราย",
     description:
       "ตรวจอาการและซ่อมเครื่องใช้ไฟฟ้าในเชียงราย แยกสาเหตุ ประเมินอะไหล่ ค่าแรง อายุเครื่อง และความคุ้มค่าก่อนขออนุมัติดำเนินงาน",
-    imageAlt: "ช่างเทคนิคกำลังตรวจซ่อมเครื่องใช้ไฟฟ้าด้วยเครื่องมือวัดบนโต๊ะงาน",
+    imageAlt: "แผงวงจรเครื่องใช้ไฟฟ้าพร้อมหัวแร้ง มัลติมิเตอร์ และเครื่องมือซ่อม",
     features: [
       "รับข้อมูลรุ่น อาการ และเหตุการณ์ก่อนเสียอย่างเป็นลำดับ",
       "ตรวจวัดเพื่อแยกต้นเหตุแทนการเปลี่ยนอะไหล่จากการเดา",
@@ -497,7 +497,7 @@ const serviceDraftBlueprints: ServiceDraftBlueprint[] = [
     title: "บริการจำหน่ายและช่วยเลือกอะไหล่อิเล็กทรอนิกส์ในเชียงราย",
     description:
       "จำหน่ายและช่วยเทียบอะไหล่อิเล็กทรอนิกส์ในเชียงราย ตรวจเบอร์ พิกัดไฟฟ้า ขั้ว ขนาด และรูปแบบขา เพื่อลดความเสี่ยงซื้อผิดสเปก",
-    imageAlt: "อะไหล่อิเล็กทรอนิกส์หลายชนิดจัดแยกหมวดหมู่สำหรับตรวจเทียบสเปก",
+    imageAlt: "อะไหล่อิเล็กทรอนิกส์ สายไฟ และเครื่องมือวัดจัดวางแยกหมวดบนโต๊ะ",
     features: [
       "ช่วยอ่านเบอร์และเทียบข้อมูลจากชิ้นส่วนเดิมหรือคู่มือ",
       "ตรวจแรงดัน กระแส กำลัง ค่าคลาดเคลื่อน และอุณหภูมิ",
@@ -604,7 +604,18 @@ export function applyServiceSeedUpdate<T extends ServiceSeedCandidate>(
   return { ...service, ...buildServiceSeedUpdate(seed) };
 }
 
-function stableJson(value: unknown): string {
+function canonicalJson(value: unknown): string | undefined {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalJson(item) ?? "null").join(",")}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, child]) => child !== undefined)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+    return `{${entries
+      .map(([key, child]) => `${JSON.stringify(key)}:${canonicalJson(child) ?? "null"}`)
+      .join(",")}}`;
+  }
   return JSON.stringify(value);
 }
 
@@ -615,18 +626,18 @@ export function serviceSeedNeedsUpdate(
   const update = buildServiceSeedUpdate(seed);
   return Object.entries(update).some(([key, value]) => {
     const current = service[key as keyof ServiceSeedCandidate];
-    return stableJson(current) !== stableJson(value);
+    return canonicalJson(current) !== canonicalJson(value);
   });
 }
 
-function normalized(value: string): string {
+export function normalizeServiceSeedSlug(value: string): string {
   return value.normalize("NFKC").toLocaleLowerCase("th").replace(/\s+/g, " ").trim();
 }
 
 function matchScore(service: ServiceSeedCandidate, seed: ServiceDraftSeed): number {
-  const haystack = normalized(`${service.name} ${service.slug}`);
+  const haystack = normalizeServiceSeedSlug(`${service.name} ${service.slug}`);
   return seed.match.reduce((best, keyword) => {
-    const needle = normalized(keyword);
+    const needle = normalizeServiceSeedSlug(keyword);
     return haystack.includes(needle) ? Math.max(best, needle.length) : best;
   }, 0);
 }
@@ -644,8 +655,27 @@ export function planServiceDraftSeeds(
   if (seeds.length !== 6 || new Set(seeds.map((seed) => seed.key)).size !== seeds.length) {
     throw new Error("ชุดข้อมูลบริการต้องมี 6 รายการและ key ต้องไม่ซ้ำ");
   }
-  if (new Set(seeds.map((seed) => normalized(seed.slug))).size !== seeds.length) {
+  if (new Set(seeds.map((seed) => normalizeServiceSeedSlug(seed.slug))).size !== seeds.length) {
     throw new Error("Slug ในชุดข้อมูลบริการซ้ำกัน");
+  }
+
+  const currentSlugOwners = new Map<string, string>();
+  for (const service of candidates) {
+    const slug = normalizeServiceSeedSlug(service.slug);
+    const existingOwner = currentSlugOwners.get(slug);
+    if (existingOwner) {
+      throw new Error(`พบ Slug ปัจจุบันซ้ำกัน: ${service.slug} (${existingOwner}, ${service.id})`);
+    }
+    currentSlugOwners.set(slug, service.id);
+  }
+  const redirectSlugOwners = new Map<string, string>();
+  for (const redirect of redirects) {
+    const slug = normalizeServiceSeedSlug(redirect.slug);
+    const existingOwner = redirectSlugOwners.get(slug);
+    if (existingOwner) {
+      throw new Error(`พบ Slug URL เดิมซ้ำกัน: ${redirect.slug} (${existingOwner}, ${redirect.serviceId})`);
+    }
+    redirectSlugOwners.set(slug, redirect.serviceId);
   }
 
   const assignments = new Map<ServiceDraftSeedKey, ServiceSeedCandidate[]>();
@@ -680,10 +710,12 @@ export function planServiceDraftSeeds(
     throw new Error("พบบริการซ้ำในการจับคู่ seed");
   }
 
-  const redirectSlugs = new Set(redirects.map((row) => normalized(row.slug)));
-  const currentBySlug = new Map(candidates.map((row) => [normalized(row.slug), row]));
+  const redirectSlugs = new Set(redirects.map((row) => normalizeServiceSeedSlug(row.slug)));
+  const currentBySlug = new Map(
+    candidates.map((row) => [normalizeServiceSeedSlug(row.slug), row]),
+  );
   for (const entry of plan) {
-    const targetSlug = normalized(entry.seed.slug);
+    const targetSlug = normalizeServiceSeedSlug(entry.seed.slug);
     if (redirectSlugs.has(targetSlug)) {
       throw new Error(`Slug เป็น URL เดิม (redirect) และนำกลับมาใช้ไม่ได้: ${entry.seed.slug}`);
     }
@@ -694,7 +726,7 @@ export function planServiceDraftSeeds(
   }
 
   for (const service of candidates) {
-    if (redirectSlugs.has(normalized(service.slug))) {
+    if (redirectSlugs.has(normalizeServiceSeedSlug(service.slug))) {
       throw new Error(`พบ Slug ปัจจุบันซ้ำกับ URL เดิม: ${service.slug}`);
     }
   }
@@ -710,7 +742,9 @@ export function validateSeededService(
   const expected = buildServiceSeedUpdate(seed);
   for (const [key, value] of Object.entries(expected)) {
     const current = service[key as keyof ServiceSeedCandidate];
-    if (stableJson(current) !== stableJson(value)) errors.push(`${seed.key}: ${key} ไม่ตรงกับ seed`);
+    if (canonicalJson(current) !== canonicalJson(value)) {
+      errors.push(`${seed.key}: ${key} ไม่ตรงกับ seed`);
+    }
   }
   const bodyText = (service.content.content ?? []).map(textFromArticleNode).join(" ");
   if (!isValidArticleDocument(service.content)) errors.push(`${seed.key}: content ไม่ถูกต้อง`);

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   isValidArticleDocument,
@@ -7,6 +8,7 @@ import {
 import {
   applyServiceSeedUpdate,
   buildServiceSeedUpdate,
+  normalizeServiceSeedSlug,
   planServiceDraftSeeds,
   serviceDraftSeeds,
   serviceSeedNeedsUpdate,
@@ -30,6 +32,15 @@ const expectedSafetyThemes: Record<string, string[]> = {
   satellite: ["ป้องกันการตก", "ฟ้าผ่า", "ฝนตก", "ลมแรง"],
   appliance: ["ถอดปลั๊ก", "คาปาซิเตอร์", "ความร้อน", "ชิ้นส่วนเคลื่อนที่", "อายุเครื่อง"],
   parts: ["เบอร์อะไหล่", "พิกัดไฟฟ้า", "ขั้ว", "ทดแทน", "หยุด"],
+};
+
+const expectedAltSubjects: Record<string, string[]> = {
+  air: ["คอยล์ร้อน", "ผนัง", "ภายนอก"],
+  cctv: ["ถนน", "อาคาร", "กล้องวงจรปิด"],
+  electrical: ["ตู้เบรกเกอร์", "อุปกรณ์ตัดวงจร"],
+  satellite: ["จานดาวเทียม", "หัวรับ", "ดาดฟ้า"],
+  appliance: ["แผงวงจร", "หัวแร้ง", "มัลติมิเตอร์"],
+  parts: ["อะไหล่อิเล็กทรอนิกส์", "สายไฟ", "เครื่องมือวัด"],
 };
 
 function plainText(seed: (typeof serviceDraftSeeds)[number]): string {
@@ -95,6 +106,10 @@ test("ships exactly six distinct, substantial, valid Thai service drafts", () =>
     assert.equal(new Set(seed.processSteps.map((step) => step.title)).size, seed.processSteps.length);
     assert.equal(new Set(seed.faqs.map((faq) => faq.question)).size, seed.faqs.length);
     assert.ok(seed.imageAlt.length >= 20, `${seed.key} needs descriptive image alt`);
+    assert.doesNotMatch(seed.imageAlt, /เชียงราย|ช่าง|เทคนิค|บุคคล/);
+    for (const subject of expectedAltSubjects[seed.key]) {
+      assert.ok(seed.imageAlt.includes(subject), `${seed.key} alt is missing: ${subject}`);
+    }
     assert.ok(seed.seoTitle.length >= 20 && seed.seoTitle.length <= 65);
     assert.ok(seed.seoDescription.length >= 80 && seed.seoDescription.length <= 160);
     assert.match(seed.seoTitle, /เชียงราย/);
@@ -111,6 +126,36 @@ test("ships exactly six distinct, substantial, valid Thai service drafts", () =>
     assert.match(warranty.answer, /ยืนยันกับทางร้าน/);
     assert.doesNotMatch(text, /รับประกัน\s*\d+|การันตี|รับรองผล/);
   }
+});
+
+function reorderObjectKeysDeep(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(reorderObjectKeysDeep);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .reverse()
+      .map(([key, child]) => [key, reorderObjectKeysDeep(child)]),
+  );
+}
+
+test("compares PostgreSQL jsonb values semantically despite nested key reordering", () => {
+  const seed = serviceDraftSeeds[0];
+  const seeded = applyServiceSeedUpdate(sixCandidates()[0], seed);
+  const reordered = {
+    ...seeded,
+    content: reorderObjectKeysDeep(seeded.content) as typeof seeded.content,
+    processSteps: reorderObjectKeysDeep(seeded.processSteps) as typeof seeded.processSteps,
+    faqs: reorderObjectKeysDeep(seeded.faqs) as typeof seeded.faqs,
+  };
+
+  assert.equal(JSON.stringify(reordered.content) === JSON.stringify(seeded.content), false);
+  assert.equal(serviceSeedNeedsUpdate(reordered, seed), false);
+  assert.deepEqual(validateSeededService(reordered, seed), []);
+});
+
+test("normalizes service seed slugs once for planner and verifier semantics", () => {
+  assert.equal(normalizeServiceSeedSlug("  บริการ   Ａ－TEST  "), "บริการ a-test");
+  assert.equal(normalizeServiceSeedSlug("อะไหล่\u0065\u0301"), normalizeServiceSeedSlug("อะไหล่é"));
 });
 
 test("matches all six services once, preferring the most specific Thai match", () => {
@@ -145,10 +190,50 @@ test("fails before writing on missing, duplicate, ambiguous, published, or reser
     /URL เดิม|redirect/,
   );
   assert.throws(
+    () => planServiceDraftSeeds(sixCandidates(), [{
+      serviceId: "old",
+      slug: `  ${serviceDraftSeeds[0].slug.replace("-", "－")}  `,
+    }]),
+    /URL เดิม|redirect/,
+  );
+  assert.throws(
     () => planServiceDraftSeeds(sixCandidates().map((row) =>
       row.id === "cctv-id" ? { ...row, slug: serviceDraftSeeds[0].slug } : row,
     ), []),
     /Slug|ถูกใช้/,
+  );
+});
+
+test("rejects duplicate normalized current slugs in every row order", () => {
+  const duplicateA = candidate("extra-a", "บริการทั่วไป", "  บริการ   Ａ－TEST  ");
+  const duplicateB = candidate("extra-b", "งานทั่วไป", "บริการ a-test");
+  for (const extras of [[duplicateA, duplicateB], [duplicateB, duplicateA]]) {
+    assert.throws(
+      () => planServiceDraftSeeds([...sixCandidates(), ...extras], []),
+      /Slug ปัจจุบันซ้ำ/,
+    );
+  }
+
+  assert.doesNotThrow(() => planServiceDraftSeeds([
+    ...sixCandidates(),
+    duplicateA,
+    candidate("extra-c", "งานทั่วไป", "บริการ b-test"),
+  ], []));
+  assert.throws(
+    () => planServiceDraftSeeds(
+      [...sixCandidates(), duplicateA],
+      [{ serviceId: "historical", slug: "บริการ a-test" }],
+    ),
+    /Slug ปัจจุบันซ้ำกับ URL เดิม/,
+  );
+});
+
+test("seeder locks rows deterministically before slugs and revalidates after advisory locks", () => {
+  const source = readFileSync("scripts/seed-services.ts", "utf8");
+  assert.match(source, /orderBy\(asc\(services\.id\)\)[\s\S]*?\.for\("update"\)/);
+  assert.match(
+    source,
+    /const initiallyLockedCandidates = await lockServiceRows\(tx\)[\s\S]*?const initialPlan = planServiceDraftSeeds[\s\S]*?await lockServiceSlugs[\s\S]*?const candidates = await lockServiceRows\(tx\)[\s\S]*?const plan = planServiceDraftSeeds/,
   );
 });
 

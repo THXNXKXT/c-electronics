@@ -1,25 +1,64 @@
 import { serviceSlugRedirects, services } from "@/db/schema";
-import { withDatabaseTransaction } from "@/db/transaction";
+import {
+  withDatabaseTransaction,
+  type DatabaseTransaction,
+} from "@/db/transaction";
 import {
   buildServiceSeedUpdate,
   planServiceDraftSeeds,
   serviceDraftSeeds,
   serviceSeedNeedsUpdate,
 } from "@/lib/service-seed-data";
-import { eq, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
+
+async function lockServiceRows(tx: DatabaseTransaction) {
+  // Match the admin mutation order: lock rows before advisory slug locks.
+  // Ordering by the primary key keeps two seed runs from locking rows differently.
+  return tx
+    .select()
+    .from(services)
+    .orderBy(asc(services.id))
+    .for("update");
+}
+
+async function readRedirects(tx: DatabaseTransaction) {
+  return tx
+    .select({
+      serviceId: serviceSlugRedirects.serviceId,
+      slug: serviceSlugRedirects.slug,
+    })
+    .from(serviceSlugRedirects);
+}
+
+async function lockServiceSlugs(
+  tx: DatabaseTransaction,
+  slugs: string[],
+) {
+  for (const slug of [...new Set(slugs)].sort()) {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${slug}, 0))`,
+    );
+  }
+}
 
 async function main() {
   const result = await withDatabaseTransaction(async (tx) => {
-    for (const slug of serviceDraftSeeds.map((seed) => seed.slug).sort()) {
-      await tx.execute(
-        sql`select pg_advisory_xact_lock(hashtextextended(${slug}, 0))`,
-      );
-    }
+    const initiallyLockedCandidates = await lockServiceRows(tx);
+    const initialRedirects = await readRedirects(tx);
+    const initialPlan = planServiceDraftSeeds(
+      initiallyLockedCandidates,
+      initialRedirects,
+    );
+    await lockServiceSlugs(tx, [
+      ...serviceDraftSeeds.map((seed) => seed.slug),
+      ...initialPlan.map(({ service }) => service.slug),
+    ]);
 
-    const candidates = await tx.select().from(services).for("update");
-    const redirects = await tx
-      .select({ serviceId: serviceSlugRedirects.serviceId, slug: serviceSlugRedirects.slug })
-      .from(serviceSlugRedirects);
+    // A concurrent create can commit while this transaction is waiting for its
+    // target advisory lock. Re-read both tables after every lock is held, then
+    // repeat the complete match/collision validation before the first update.
+    const candidates = await lockServiceRows(tx);
+    const redirects = await readRedirects(tx);
     const plan = planServiceDraftSeeds(candidates, redirects);
     const now = new Date();
     const changed: string[] = [];
