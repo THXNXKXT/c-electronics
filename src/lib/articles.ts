@@ -59,6 +59,14 @@ export function slugifyArticleTitle(input: string): string {
   return slug || "article";
 }
 
+export function normalizeArticleRouteSlug(input: string): string {
+  try {
+    return decodeURIComponent(input).normalize("NFKC");
+  } catch {
+    return input.normalize("NFKC");
+  }
+}
+
 export function sanitizeCanonical(
   input?: string | null,
   siteUrl = SITE_URL,

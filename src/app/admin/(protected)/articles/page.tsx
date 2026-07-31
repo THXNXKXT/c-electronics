@@ -1,6 +1,9 @@
-import { listAdminArticles } from "@/lib/article-queries";
-import { Archive, FileText, Plus, Search } from "lucide-react";
-import Link from "next/link";
+import {
+  listAdminArticles,
+  listArticleEditorOptions,
+} from "@/lib/article-queries";
+import { Archive, FileText, Search } from "lucide-react";
+import { ArticleQuickCreate } from "./article-quick-create";
 import { ArticleRowActions } from "./article-row-actions";
 
 const statusOptions = [
@@ -19,14 +22,17 @@ export default async function AdminArticlesPage({
   const status = statusOptions.some((option) => option.value === params.status)
     ? (params.status as (typeof statusOptions)[number]["value"])
     : "all";
-  const allArticles = await listAdminArticles({
-    query: params.q,
-    status,
-  });
+  const [allArticles, editorOptions] = await Promise.all([
+    listAdminArticles({
+      query: params.q,
+      status,
+    }),
+    listArticleEditorOptions(),
+  ]);
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
             จัดการบทความ
@@ -35,13 +41,9 @@ export default async function AdminArticlesPage({
             {allArticles.length} รายการในมุมมองนี้
           </p>
         </div>
-        <Link
-          href="/admin/articles/new"
-          className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover"
-        >
-          <Plus className="size-4" /> สร้างบทความ
-        </Link>
       </div>
+
+      <ArticleQuickCreate options={editorOptions} />
 
       <form className="mb-5 grid gap-3 rounded-[20px] border border-black/5 bg-white p-4 sm:grid-cols-[1fr_180px_auto]">
         <label className="relative">

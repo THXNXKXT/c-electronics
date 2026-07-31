@@ -5,7 +5,11 @@ import {
   getPublishedArticleBySlug,
   listPublishedArticles,
 } from "@/lib/article-queries";
-import { extractTableOfContents, resolveArticleSeo } from "@/lib/articles";
+import {
+  extractTableOfContents,
+  normalizeArticleRouteSlug,
+  resolveArticleSeo,
+} from "@/lib/articles";
 import { ArrowRight, BookOpen, Package, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -23,7 +27,8 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: routeSlug } = await params;
+  const slug = normalizeArticleRouteSlug(routeSlug);
   const article = await getArticle(slug);
   if (!article) return {};
   const seo = resolveArticleSeo(article);
@@ -66,7 +71,8 @@ export default async function ArticleDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params;
+  const { slug: routeSlug } = await params;
+  const slug = normalizeArticleRouteSlug(routeSlug);
   const article = await getArticle(slug);
   if (!article) notFound();
 

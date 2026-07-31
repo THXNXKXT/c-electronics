@@ -245,3 +245,62 @@ test("locks URLs after first publication and only hard-deletes new drafts", asyn
     false,
   );
 });
+
+test("decodes percent-encoded Thai slugs before querying the database", async () => {
+  const { normalizeArticleRouteSlug } = await loadArticlesModule();
+  const encoded =
+    "%E0%B9%80%E0%B8%A5%E0%B8%B7%E0%B8%AD%E0%B8%81%E0%B8%AD%E0%B8%B0%E0%B9%84%E0%B8%AB%E0%B8%A5%E0%B9%88%E0%B8%AD%E0%B8%B4%E0%B9%80%E0%B8%A5%E0%B9%87%E0%B8%81%E0%B8%97%E0%B8%A3%E0%B8%AD%E0%B8%99%E0%B8%B4%E0%B8%81%E0%B8%AA%E0%B9%8C-%E0%B8%95%E0%B8%A3%E0%B8%87%E0%B8%AA%E0%B9%80%E0%B8%9B%E0%B8%81-%E0%B8%9B%E0%B8%A5%E0%B8%AD%E0%B8%94%E0%B8%A0%E0%B8%B1%E0%B8%A2";
+
+  assert.equal(
+    normalizeArticleRouteSlug(encoded),
+    "เลือกอะไหล่อิเล็กทรอนิกส์-ตรงสเปก-ปลอดภัย",
+  );
+  assert.equal(normalizeArticleRouteSlug("cctv-guide"), "cctv-guide");
+  assert.equal(normalizeArticleRouteSlug("%E0%A4%A"), "%E0%A4%A");
+});
+
+test("maps each article transition to the matching confirmation modal", async () => {
+  const modulePath = "../src/lib/article-confirmations";
+  const confirmationModule = await import(modulePath).catch(() => null);
+  assert.ok(
+    confirmationModule,
+    "article confirmation states must be implemented",
+  );
+
+  const title = "คู่มือเลือกอะไหล่";
+  assert.deepEqual(confirmationModule.getArticleConfirmation("publish", title), {
+    title: "เผยแพร่บทความ",
+    message: "เผยแพร่ “คู่มือเลือกอะไหล่” บนเว็บไซต์หรือไม่?",
+    confirmLabel: "เผยแพร่",
+    variant: "primary",
+  });
+  assert.deepEqual(
+    confirmationModule.getArticleConfirmation("unpublish", title),
+    {
+      title: "ยกเลิกเผยแพร่",
+      message: "นำ “คู่มือเลือกอะไหล่” ออกจากหน้าเว็บไซต์หรือไม่?",
+      confirmLabel: "ยกเลิกเผยแพร่",
+      variant: "warning",
+    },
+  );
+  assert.deepEqual(confirmationModule.getArticleConfirmation("archive", title), {
+    title: "เก็บบทความถาวร",
+    message:
+      "เก็บ “คู่มือเลือกอะไหล่” เข้าคลังหรือไม่? บทความจะถูกยกเลิกเผยแพร่ด้วย",
+    confirmLabel: "เก็บถาวร",
+    variant: "warning",
+  });
+  assert.deepEqual(confirmationModule.getArticleConfirmation("restore", title), {
+    title: "นำบทความกลับมา",
+    message: "นำ “คู่มือเลือกอะไหล่” กลับมาเป็นฉบับร่างหรือไม่?",
+    confirmLabel: "นำกลับมา",
+    variant: "primary",
+  });
+  assert.deepEqual(confirmationModule.getArticleConfirmation("delete", title), {
+    title: "ลบร่างบทความ",
+    message:
+      "ลบร่าง “คู่มือเลือกอะไหล่” ถาวรหรือไม่? การทำรายการนี้ย้อนกลับไม่ได้",
+    confirmLabel: "ลบร่าง",
+    variant: "danger",
+  });
+});

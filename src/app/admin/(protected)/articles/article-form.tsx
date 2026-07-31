@@ -1,7 +1,12 @@
 "use client";
 
 import { ArticleRichTextEditor } from "@/components/article-rich-text-editor";
+import { ConfirmModal } from "@/components/confirm-modal";
 import { ImageUpload } from "@/components/image-upload";
+import {
+  getArticleConfirmation,
+  type ArticleConfirmationAction,
+} from "@/lib/article-confirmations";
 import {
   slugifyArticleTitle,
   type ArticleDocument,
@@ -54,7 +59,7 @@ type EditableArticle = {
   publishedAt: Date | null;
 };
 
-type EditorOptions = {
+export type ArticleEditorOptions = {
   services: Array<{ id: string; name: string }>;
   products: Array<{ id: string; name: string; category: string }>;
 };
@@ -65,9 +70,11 @@ const fieldClass =
 export function ArticleForm({
   article,
   options,
+  embedded = false,
 }: {
   article?: EditableArticle;
-  options: EditorOptions;
+  options: ArticleEditorOptions;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -83,6 +90,8 @@ export function ArticleForm({
   );
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
+  const [confirmation, setConfirmation] =
+    useState<ArticleConfirmationAction | null>(null);
 
   function runAction(action: () => Promise<void>) {
     setError("");
@@ -119,47 +128,49 @@ export function ArticleForm({
     });
   }
 
-  function togglePublication() {
-    if (!article) return;
-    const publishing = article.status !== "published";
-    if (
-      publishing &&
-      !window.confirm(
-        "เผยแพร่ข้อมูลที่บันทึกล่าสุด? กรุณาบันทึกการแก้ไขก่อนดำเนินการ",
-      )
-    ) {
-      return;
-    }
+  function confirmTransition() {
+    if (!article || !confirmation) return;
+    const action = confirmation;
+    setConfirmation(null);
 
     runAction(async () => {
-      await setArticlePublicationAction(article.id, publishing);
-      router.refresh();
-    });
-  }
-
-  function toggleArchive() {
-    if (!article) return;
-    runAction(async () => {
-      await setArticleArchivedAction(article.id, !article.archived);
+      if (action === "publish" || action === "unpublish") {
+        await setArticlePublicationAction(article.id, action === "publish");
+      } else if (action === "archive" || action === "restore") {
+        await setArticleArchivedAction(article.id, action === "archive");
+      }
       router.refresh();
     });
   }
 
   const slugLocked = Boolean(article?.publishedAt);
+  const confirmationContent =
+    article && confirmation
+      ? getArticleConfirmation(confirmation, article.title)
+      : null;
 
   return (
     <form onSubmit={handleSave}>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link
-            href="/admin/articles"
-            className="text-sm font-semibold text-primary hover:underline"
+          {!embedded && (
+            <Link
+              href="/admin/articles"
+              className="text-sm font-semibold text-primary hover:underline"
+            >
+              ← กลับไปหน้าบทความ
+            </Link>
+          )}
+          <h1
+            className={`${embedded ? "text-xl" : "mt-2 text-2xl"} font-bold tracking-tight`}
           >
-            ← กลับไปหน้าบทความ
-          </Link>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight">
             {article ? "แก้ไขบทความ" : "สร้างบทความใหม่"}
           </h1>
+          {embedded && (
+            <p className="mt-1 text-sm text-muted">
+              กรอกข้อมูล เนื้อหา ความเกี่ยวข้อง และ SEO ให้ครบในฟอร์มเดียว
+            </p>
+          )}
           {article && (
             <p className="mt-1 text-sm text-muted">
               สถานะ:{" "}
@@ -186,7 +197,11 @@ export function ArticleForm({
               <button
                 type="button"
                 disabled={pending || article.archived}
-                onClick={togglePublication}
+                onClick={() =>
+                  setConfirmation(
+                    article.status === "published" ? "unpublish" : "publish",
+                  )
+                }
                 className="flex items-center gap-2 rounded-full border border-primary px-4 py-2.5 text-sm font-semibold text-primary disabled:opacity-40"
               >
                 {article.status === "published" ? (
@@ -201,7 +216,9 @@ export function ArticleForm({
               <button
                 type="button"
                 disabled={pending}
-                onClick={toggleArchive}
+                onClick={() =>
+                  setConfirmation(article.archived ? "restore" : "archive")
+                }
                 className="flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2.5 text-sm font-semibold disabled:opacity-40"
               >
                 {article.archived ? (
@@ -490,6 +507,17 @@ export function ArticleForm({
           </section>
         </aside>
       </div>
+
+      <ConfirmModal
+        open={Boolean(confirmationContent)}
+        title={confirmationContent?.title ?? ""}
+        message={confirmationContent?.message ?? ""}
+        confirmLabel={confirmationContent?.confirmLabel}
+        variant={confirmationContent?.variant}
+        busy={pending}
+        onConfirm={confirmTransition}
+        onCancel={() => setConfirmation(null)}
+      />
     </form>
   );
 }
