@@ -9,33 +9,58 @@ import {
 
 const publishedAt = new Date("2026-07-31T08:00:00.000Z");
 
-function enclosingHrefForImage(
-  node: React.ReactNode,
+function getRenderedAttribute(tag: string, name: string): string | undefined {
+  const match = tag.match(
+    new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i"),
+  );
+  return match?.[1] ?? match?.[2];
+}
+
+function enclosingAnchorHrefForImage(
+  markup: string,
   imageSrc: string,
-  ancestorHrefs: string[] = [],
 ): string | null | undefined {
-  if (!React.isValidElement(node)) return undefined;
-  const props = node.props as {
-    children?: React.ReactNode;
-    href?: unknown;
-    src?: unknown;
-  };
-  const hrefs =
-    typeof props.href === "string"
-      ? [...ancestorHrefs, props.href]
-      : ancestorHrefs;
+  const anchorHrefs: Array<string | null> = [];
+  const tags = markup.matchAll(
+    /<\/?([A-Za-z][A-Za-z0-9:-]*)(?:\s[^<>]*?)?\/?>/g,
+  );
 
-  if (node.type === "img" && props.src === imageSrc) {
-    return hrefs.at(-1) ?? null;
-  }
+  for (const match of tags) {
+    const tag = match[0];
+    const name = match[1].toLocaleLowerCase();
+    const closing = tag.startsWith("</");
 
-  for (const child of React.Children.toArray(props.children)) {
-    const result = enclosingHrefForImage(child, imageSrc, hrefs);
-    if (result !== undefined) return result;
+    if (name === "a") {
+      if (closing) anchorHrefs.pop();
+      else anchorHrefs.push(getRenderedAttribute(tag, "href") ?? null);
+      continue;
+    }
+
+    if (
+      !closing &&
+      name === "img" &&
+      getRenderedAttribute(tag, "src") === imageSrc
+    ) {
+      return anchorHrefs.at(-1) ?? null;
+    }
   }
 
   return undefined;
 }
+
+test("image link inspection ignores href props on non-anchor elements", () => {
+  const falseAnchor = React.createElement(
+    "div",
+    { href: "/services/not-an-anchor" },
+    React.createElement("img", { src: "/false-anchor.webp", alt: "" }),
+  );
+  const markup = renderToStaticMarkup(falseAnchor);
+
+  assert.equal(
+    enclosingAnchorHrefForImage(markup, "/false-anchor.webp"),
+    null,
+  );
+});
 
 test("builds a detail URL only for a currently published service", () => {
   assert.equal(
@@ -180,13 +205,15 @@ test("home cards link published details and keep draft booking actions", async (
       articles: [],
     }),
   );
-  const tree = HomeClient({ services, products: [], articles: [] });
 
   assert.equal(
-    enclosingHrefForImage(tree, "/published-home.webp"),
+    enclosingAnchorHrefForImage(markup, "/published-home.webp"),
     "/services/published-service",
   );
-  assert.equal(enclosingHrefForImage(tree, "/draft-home.webp"), null);
+  assert.equal(
+    enclosingAnchorHrefForImage(markup, "/draft-home.webp"),
+    null,
+  );
   assert.match(markup, /href="\/services\/published-service"/);
   assert.equal(
     markup.match(/href="\/services\/published-service"/g)?.length,
