@@ -11,6 +11,7 @@ import {
   setServiceArchivedAction as archiveServiceAction,
 } from "./actions";
 import { ConfirmModal } from "@/components/confirm-modal";
+import { completeLegacyServiceFormData } from "@/lib/service-input";
 
 export function AdminServicesClient({
   initialServices,
@@ -29,14 +30,16 @@ export function AdminServicesClient({
   const items = initialServices; // ponytail: derived from props for router.refresh()
   const [newImage, setNewImage] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchived] = useState(false);
   const router = useRouter();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [adding, setAdding] = useState(false);
   const [features, setFeatures] = useState<string[]>([""]);
 
-  const archivedCount = items.filter((s: any) => s.archived).length;
-  const visible = showArchived ? items : items.filter((s: any) => !s.archived);
+  const archivedCount = items.filter((service) => service.archived).length;
+  const visible = showArchived
+    ? items
+    : items.filter((service) => !service.archived);
 
   async function confirmDelete() {
     if (!deleteTarget) return;
@@ -51,6 +54,7 @@ export function AdminServicesClient({
     const fd = new FormData(e.currentTarget);
     fd.set("image", newImage);
     fd.set("features", features.filter(Boolean).join("|"));
+    completeLegacyServiceFormData(fd);
     await createServiceAction(fd);
     setAdding(false);
     setNewImage("");
@@ -82,10 +86,10 @@ export function AdminServicesClient({
           <h2 className="text-sm font-bold">เพิ่มบริการใหม่</h2>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <input name="name" required placeholder="ชื่อบริการ เช่น ติดตั้งแอร์" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary" />
+          <input name="name" required minLength={3} maxLength={120} placeholder="ชื่อบริการ เช่น ติดตั้งแอร์" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary" />
           <input name="price" placeholder="ราคา เช่น เริ่มต้น 1,500 ฿" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary" />
         </div>
-        <textarea name="description" rows={2} placeholder="คำอธิบาย" className="mt-3 w-full resize-none rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary" />
+        <textarea name="description" rows={2} required minLength={20} maxLength={500} placeholder="คำอธิบาย" className="mt-3 w-full resize-none rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary" />
         <div className="mt-3">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-subtle">คุณสมบัติ</p>
           <div className="space-y-2">

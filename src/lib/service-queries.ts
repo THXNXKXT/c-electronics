@@ -22,14 +22,18 @@ function publicServiceConditions() {
   ];
 }
 
-export async function listPublicServiceCards(): Promise<
-  Array<typeof services.$inferSelect>
-> {
+export function buildPublicServiceCardsQuery() {
   return db
     .select()
     .from(services)
-    .where(and(...publicServiceConditions()))
+    .where(eq(services.archived, false))
     .orderBy(desc(services.featured), services.name);
+}
+
+export async function listPublicServiceCards(): Promise<
+  Array<typeof services.$inferSelect>
+> {
+  return buildPublicServiceCardsQuery();
 }
 
 export async function listAdminServices(options?: {

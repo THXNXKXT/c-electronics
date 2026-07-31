@@ -2,6 +2,7 @@ import {
   isValidArticleDocument,
   sanitizeArticleUrl,
   sanitizeCanonical,
+  SITE_URL,
   type ArticleDocument,
 } from "./articles";
 import {
@@ -9,6 +10,21 @@ import {
   type ServiceFaq,
   type ServiceProcessStep,
 } from "./services";
+
+export type LegacyServiceMetadata = {
+  slug: string;
+  icon: string;
+  image: string | null;
+  imageAlt: string | null;
+  content: ArticleDocument;
+  processSteps: ServiceProcessStep[];
+  faqs: ServiceFaq[];
+  featured: boolean;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  canonicalUrl: string | null;
+  noIndex: boolean;
+};
 
 export type ServiceInput = {
   name: string;
@@ -33,6 +49,91 @@ export type ServiceInput = {
 function optionalText(formData: FormData, key: string): string | null {
   const value = String(formData.get(key) ?? "").trim();
   return value || null;
+}
+
+function setIfMissing(formData: FormData, key: string, value: string) {
+  if (!formData.has(key)) formData.set(key, value);
+}
+
+export function completeLegacyServiceFormData(
+  formData: FormData,
+  existing?: LegacyServiceMetadata,
+): FormData {
+  setIfMissing(
+    formData,
+    "slug",
+    existing?.slug ?? String(formData.get("name") ?? ""),
+  );
+  setIfMissing(formData, "icon", existing?.icon ?? "Wrench");
+  setIfMissing(
+    formData,
+    "content",
+    JSON.stringify(
+      existing?.content ?? {
+        type: "doc",
+        content: [{ type: "paragraph", content: [] }],
+      },
+    ),
+  );
+  setIfMissing(
+    formData,
+    "processSteps",
+    JSON.stringify(existing?.processSteps ?? []),
+  );
+  setIfMissing(formData, "faqs", JSON.stringify(existing?.faqs ?? []));
+
+  if (existing) {
+    const submittedImage = String(formData.get("image") ?? "").trim();
+    if (submittedImage === (existing.image ?? "")) {
+      setIfMissing(formData, "imageAlt", existing.imageAlt ?? "");
+    }
+    setIfMissing(formData, "seoTitle", existing.seoTitle ?? "");
+    setIfMissing(formData, "seoDescription", existing.seoDescription ?? "");
+    setIfMissing(formData, "canonicalUrl", existing.canonicalUrl ?? "");
+    if (existing.featured) setIfMissing(formData, "featured", "on");
+    if (existing.noIndex) setIfMissing(formData, "noIndex", "on");
+  }
+
+  return formData;
+}
+
+export function deriveServiceImagePublicId(imageUrl: string): string | null {
+  const url = new URL(imageUrl, SITE_URL);
+  if (url.hostname.toLocaleLowerCase() !== "res.cloudinary.com") return null;
+
+  const segments = url.pathname.split("/").filter(Boolean);
+  const uploadIndex = segments.findIndex(
+    (segment, index) => segment === "upload" && segments[index - 1] === "image",
+  );
+  const versionIndex = segments.findIndex(
+    (segment, index) => index > uploadIndex && /^v\d+$/.test(segment),
+  );
+  if (uploadIndex < 1 || versionIndex < 0) {
+    throw new Error("รูป Cloudinary ของบริการไม่ถูกต้อง");
+  }
+
+  const encodedAssetPath = segments.slice(versionIndex + 1).join("/");
+  let assetPath: string;
+  try {
+    assetPath = decodeURIComponent(encodedAssetPath);
+  } catch {
+    throw new Error("รูป Cloudinary ของบริการไม่ถูกต้อง");
+  }
+  const extensionIndex = assetPath.lastIndexOf(".");
+  const publicId = extensionIndex > 0
+    ? assetPath.slice(0, extensionIndex)
+    : assetPath;
+  if (
+    !publicId.startsWith("c-electronics/services/") ||
+    publicId.length <= "c-electronics/services/".length ||
+    publicId.includes("\\") ||
+    publicId.split("/").includes("..")
+  ) {
+    throw new Error(
+      "รูป Cloudinary ต้องอยู่ในโฟลเดอร์ c-electronics/services",
+    );
+  }
+  return publicId;
 }
 
 function parseJson(formData: FormData, key: string, label: string): unknown {
@@ -126,6 +227,10 @@ export function parseServiceInput(formData: FormData): ServiceInput {
   if (imageInput && !sanitizeArticleUrl(imageInput, "image")) {
     throw new Error("รูปบริการต้องมาจาก Cloudinary หรือเว็บไซต์นี้");
   }
+  const image = imageInput
+    ? sanitizeArticleUrl(imageInput, "image") ?? null
+    : null;
+  const imagePublicId = image ? deriveServiceImagePublicId(image) : null;
 
   const highlights = String(formData.get("features") ?? "")
     .split("|")
@@ -141,9 +246,9 @@ export function parseServiceInput(formData: FormData): ServiceInput {
     description,
     price: optionalText(formData, "price"),
     icon: optionalText(formData, "icon") ?? "Wrench",
-    image: imageInput ? sanitizeArticleUrl(imageInput, "image") ?? null : null,
+    image,
     imageAlt: optionalText(formData, "imageAlt"),
-    imagePublicId: optionalText(formData, "imagePublicId"),
+    imagePublicId,
     features: highlights.length ? highlights.join("|") : null,
     content: rawContent,
     processSteps: parseProcessSteps(formData),

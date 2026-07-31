@@ -5,11 +5,15 @@ import Link from "next/link";
 import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
 import { ImageUpload } from "@/components/image-upload";
 import { updateServiceAction } from "../../actions";
+import {
+  completeLegacyServiceFormData,
+  type LegacyServiceMetadata,
+} from "@/lib/service-input";
 
 export function AdminServiceEditClient({
   service,
 }: {
-  service: {
+  service: LegacyServiceMetadata & {
     id: string;
     name: string;
     price: string | null;
@@ -30,6 +34,7 @@ export function AdminServiceEditClient({
     const fd = new FormData(e.currentTarget);
     fd.set("image", image);
     fd.set("features", features.filter(Boolean).join("|"));
+    completeLegacyServiceFormData(fd, service);
     await updateServiceAction(service.id, fd);
     setSaving(false);
     window.location.href = "/admin/services";
@@ -46,10 +51,10 @@ export function AdminServiceEditClient({
 
       <form onSubmit={handleSave} className="mt-6 rounded-[20px] border border-black/5 bg-white p-5">
         <div className="grid gap-3 sm:grid-cols-2">
-          <input name="name" defaultValue={service.name} required placeholder="ชื่อบริการ" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary" />
+          <input name="name" defaultValue={service.name} required minLength={3} maxLength={120} placeholder="ชื่อบริการ" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary" />
           <input name="price" defaultValue={service.price ?? ""} placeholder="ราคา เช่น เริ่มต้น 1,500 ฿" className="rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary" />
         </div>
-        <textarea name="description" rows={2} defaultValue={service.description ?? ""} placeholder="คำอธิบาย" className="mt-3 w-full resize-none rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary" />
+        <textarea name="description" rows={2} required minLength={20} maxLength={500} defaultValue={service.description ?? ""} placeholder="คำอธิบาย" className="mt-3 w-full resize-none rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary" />
         <div className="mt-3">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-subtle">คุณสมบัติ</p>
           <div className="space-y-2">

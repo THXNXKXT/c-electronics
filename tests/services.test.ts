@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertServiceReadyForPublication,
   buildServiceStructuredData,
   canDeleteServicePermanently,
   getServiceRevalidationPaths,
@@ -22,6 +23,64 @@ test("only public indexable services enter search", () => {
   assert.equal(isIndexableService({ status: "draft", archived: false, noIndex: false }), false);
   assert.equal(isIndexableService({ status: "published", archived: true, noIndex: false }), false);
   assert.equal(isIndexableService({ status: "published", archived: false, noIndex: true }), false);
+});
+
+test("requires normalized visible content and complete publication fields", () => {
+  const ready = {
+    content: {
+      type: "doc" as const,
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "ก".repeat(600) }],
+        },
+      ],
+    },
+    description: "คำอธิบายบริการที่พร้อมเผยแพร่",
+    processSteps: [{ title: "สำรวจ", description: "ตรวจหน้างาน" }],
+    image: null,
+    imageAlt: null,
+  };
+
+  assert.doesNotThrow(() => assertServiceReadyForPublication(ready));
+  assert.throws(
+    () =>
+      assertServiceReadyForPublication({
+        ...ready,
+        content: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: `${"ก".repeat(599)}${" ".repeat(1_000)}`,
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    /600/,
+  );
+  assert.throws(
+    () => assertServiceReadyForPublication({ ...ready, processSteps: [] }),
+    /ขั้นตอน/,
+  );
+  assert.throws(
+    () => assertServiceReadyForPublication({ ...ready, description: "" }),
+    /คำอธิบาย/,
+  );
+  assert.throws(
+    () =>
+      assertServiceReadyForPublication({
+        ...ready,
+        image: "https://res.cloudinary.com/demo/image.jpg",
+        imageAlt: "",
+      }),
+    /alt text/,
+  );
 });
 
 test("resolves service SEO and safe canonical", () => {

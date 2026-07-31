@@ -205,6 +205,7 @@ export function sanitizeArticleUrl(
   if (typeof input !== "string") return undefined;
   const value = input.trim();
   if (!value) return undefined;
+  if (value.includes("\\")) return undefined;
 
   if (value.startsWith("/") && !value.startsWith("//")) return value;
   if (kind === "link" && value.startsWith("#")) return value;
@@ -235,7 +236,9 @@ export function isValidArticleDocument(
   const root = input as ArticleNode;
   if (root.type !== "doc" || !Array.isArray(root.content)) return false;
 
-  function isValidNode(node: ArticleNode, depth: number): boolean {
+  function isValidNode(inputNode: unknown, depth: number): boolean {
+    if (!inputNode || typeof inputNode !== "object") return false;
+    const node = inputNode as ArticleNode;
     if (depth > 30 || !ALLOWED_ARTICLE_NODES.has(node.type)) return false;
     if (node.type === "doc" && depth !== 0) return false;
 

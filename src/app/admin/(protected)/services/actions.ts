@@ -1,23 +1,40 @@
 "use server";
 
-import { db } from "@/db";
 import { services, serviceSlugRedirects } from "@/db/schema";
+import {
+  withDatabaseTransaction,
+  type DatabaseTransaction,
+} from "@/db/transaction";
 import { requireAdmin } from "@/lib/auth";
-import { deleteCloudinaryImage } from "@/lib/cloudinary";
+import { deleteCloudinaryImage, withTimeout } from "@/lib/cloudinary";
 import { revalidateServicePages } from "@/lib/revalidate-service-pages";
 import { parseServiceInput } from "@/lib/service-input";
 import { listArticleSlugsForService } from "@/lib/service-queries";
-import { canDeleteServicePermanently } from "@/lib/services";
-import { textFromArticleNode } from "@/lib/articles";
-import { and, eq, ne } from "drizzle-orm";
+import {
+  assertServiceReadyForPublication,
+  canDeleteServicePermanently,
+} from "@/lib/services";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-type QueryExecutor = Pick<typeof db, "select">;
+type QueryExecutor = Pick<DatabaseTransaction, "select">;
+
+async function lockServiceSlugs(
+  tx: DatabaseTransaction,
+  slugs: string[],
+) {
+  const orderedSlugs = Array.from(new Set(slugs)).sort();
+  for (const slug of orderedSlugs) {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${slug}, 0))`,
+    );
+  }
+}
 
 async function assertUniqueServiceSlug(
   slug: string,
-  excludedId?: string,
-  executor: QueryExecutor = db,
+  excludedId: string | undefined,
+  executor: QueryExecutor,
 ) {
   const [currentCollision] = await executor
     .select({ id: services.id })
@@ -52,13 +69,16 @@ export async function createServiceAction(
 ): Promise<{ id: string; slug: string }> {
   await requireAdmin();
   const input = parseServiceInput(formData);
-  await assertUniqueServiceSlug(input.slug);
   const id = crypto.randomUUID();
 
-  await db.insert(services).values({
-    id,
-    ...input,
-    status: "draft",
+  await withDatabaseTransaction(async (tx) => {
+    await lockServiceSlugs(tx, [input.slug]);
+    await assertUniqueServiceSlug(input.slug, undefined, tx);
+    await tx.insert(services).values({
+      id,
+      ...input,
+      status: "draft",
+    });
   });
 
   revalidateMutation([input.slug], []);
@@ -72,43 +92,46 @@ export async function updateServiceAction(
   await requireAdmin();
   const articleSlugs = await listArticleSlugsForService(id);
   const input = parseServiceInput(formData);
-  const [current] = await db
-    .select({
-      id: services.id,
-      slug: services.slug,
-      publishedAt: services.publishedAt,
-    })
-    .from(services)
-    .where(eq(services.id, id))
-    .limit(1);
-
-  if (!current) throw new Error("ไม่พบบริการ");
-
-  const slugChanged = current.slug !== input.slug;
   const now = new Date();
 
-  if (slugChanged && current.publishedAt) {
-    await db.transaction(async (tx) => {
+  const current = await withDatabaseTransaction(async (tx) => {
+    const [lockedService] = await tx
+      .select({
+        id: services.id,
+        slug: services.slug,
+        status: services.status,
+        publishedAt: services.publishedAt,
+      })
+      .from(services)
+      .where(eq(services.id, id))
+      .limit(1)
+      .for("update");
+
+    if (!lockedService) throw new Error("ไม่พบบริการ");
+    const slugChanged = lockedService.slug !== input.slug;
+    await lockServiceSlugs(tx, [lockedService.slug, input.slug]);
+
+    if (slugChanged) {
       await assertUniqueServiceSlug(input.slug, id, tx);
-      await tx.insert(serviceSlugRedirects).values({
-        serviceId: id,
-        slug: current.slug,
-      });
-      await tx
-        .update(services)
-        .set({ ...input, updatedAt: now })
-        .where(eq(services.id, id));
-    });
-  } else {
-    if (slugChanged) await assertUniqueServiceSlug(input.slug, id);
-    await db
+      if (lockedService.publishedAt) {
+        await tx.insert(serviceSlugRedirects).values({
+          serviceId: id,
+          slug: lockedService.slug,
+        });
+      }
+    }
+    if (lockedService.status === "published") {
+      assertServiceReadyForPublication(input);
+    }
+    await tx
       .update(services)
       .set({ ...input, updatedAt: now })
       .where(eq(services.id, id));
-  }
+    return lockedService;
+  });
 
   revalidateMutation(
-    slugChanged ? [current.slug, input.slug] : [current.slug],
+    current.slug === input.slug ? [current.slug] : [current.slug, input.slug],
     articleSlugs,
   );
   return { id, slug: input.slug };
@@ -120,46 +143,30 @@ export async function setServicePublicationAction(
 ): Promise<void> {
   await requireAdmin();
   const articleSlugs = await listArticleSlugsForService(id);
-  const [service] = await db
-    .select()
-    .from(services)
-    .where(eq(services.id, id))
-    .limit(1);
-
-  if (!service) throw new Error("ไม่พบบริการ");
-
-  if (publish) {
-    const bodyText = (service.content.content ?? [])
-      .map(textFromArticleNode)
-      .join(" ")
-      .trim();
-
-    if (bodyText.length < 600) {
-      throw new Error(
-        "เนื้อหายังสั้นเกินไปสำหรับเผยแพร่ (อย่างน้อย 600 ตัวอักษร)",
-      );
-    }
-    if (!service.description?.trim()) {
-      throw new Error("กรุณาระบุคำอธิบายบริการก่อนเผยแพร่");
-    }
-    if (service.processSteps.length === 0) {
-      throw new Error("กรุณาระบุขั้นตอนบริการอย่างน้อย 1 ขั้นตอนก่อนเผยแพร่");
-    }
-    if (service.image && !service.imageAlt?.trim()) {
-      throw new Error("กรุณาใส่ alt text ของรูปบริการก่อนเผยแพร่");
-    }
-  }
-
   const now = new Date();
-  await db
-    .update(services)
-    .set({
-      status: publish ? "published" : "draft",
-      publishedAt: publish ? service.publishedAt ?? now : service.publishedAt,
-      archived: publish ? false : service.archived,
-      updatedAt: now,
-    })
-    .where(eq(services.id, id));
+  const service = await withDatabaseTransaction(async (tx) => {
+    const [lockedService] = await tx
+      .select()
+      .from(services)
+      .where(eq(services.id, id))
+      .limit(1)
+      .for("update");
+    if (!lockedService) throw new Error("ไม่พบบริการ");
+    if (publish) assertServiceReadyForPublication(lockedService);
+
+    await tx
+      .update(services)
+      .set({
+        status: publish ? "published" : "draft",
+        publishedAt: publish
+          ? lockedService.publishedAt ?? now
+          : lockedService.publishedAt,
+        archived: publish ? false : lockedService.archived,
+        updatedAt: now,
+      })
+      .where(eq(services.id, id));
+    return lockedService;
+  });
 
   revalidateMutation([service.slug], articleSlugs);
 }
@@ -170,22 +177,25 @@ export async function setServiceArchivedAction(
 ): Promise<void> {
   await requireAdmin();
   const articleSlugs = await listArticleSlugsForService(id);
-  const [service] = await db
-    .select({ slug: services.slug })
-    .from(services)
-    .where(eq(services.id, id))
-    .limit(1);
+  const service = await withDatabaseTransaction(async (tx) => {
+    const [lockedService] = await tx
+      .select({ slug: services.slug })
+      .from(services)
+      .where(eq(services.id, id))
+      .limit(1)
+      .for("update");
+    if (!lockedService) throw new Error("ไม่พบบริการ");
 
-  if (!service) throw new Error("ไม่พบบริการ");
-
-  await db
-    .update(services)
-    .set({
-      archived,
-      status: "draft",
-      updatedAt: new Date(),
-    })
-    .where(eq(services.id, id));
+    await tx
+      .update(services)
+      .set({
+        archived,
+        status: "draft",
+        updatedAt: new Date(),
+      })
+      .where(eq(services.id, id));
+    return lockedService;
+  });
 
   revalidateMutation([service.slug], articleSlugs);
 }
@@ -193,27 +203,32 @@ export async function setServiceArchivedAction(
 export async function deleteDraftServiceAction(id: string): Promise<void> {
   await requireAdmin();
   const articleSlugs = await listArticleSlugsForService(id);
-  const [service] = await db
-    .select({
-      slug: services.slug,
-      status: services.status,
-      publishedAt: services.publishedAt,
-      imagePublicId: services.imagePublicId,
-    })
-    .from(services)
-    .where(eq(services.id, id))
-    .limit(1);
-
-  if (!service) throw new Error("ไม่พบบริการ");
-  if (!canDeleteServicePermanently(service)) {
-    throw new Error("ลบถาวรได้เฉพาะร่างที่ไม่เคยเผยแพร่");
-  }
-
-  await db.delete(services).where(eq(services.id, id));
-  await deleteCloudinaryImage(service.imagePublicId).catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn("cloudinary delete failed:", message);
+  const service = await withDatabaseTransaction(async (tx) => {
+    const [lockedService] = await tx
+      .select({
+        slug: services.slug,
+        status: services.status,
+        publishedAt: services.publishedAt,
+        imagePublicId: services.imagePublicId,
+      })
+      .from(services)
+      .where(eq(services.id, id))
+      .limit(1)
+      .for("update");
+    if (!lockedService) throw new Error("ไม่พบบริการ");
+    if (!canDeleteServicePermanently(lockedService)) {
+      throw new Error("ลบถาวรได้เฉพาะร่างที่ไม่เคยเผยแพร่");
+    }
+    await lockServiceSlugs(tx, [lockedService.slug]);
+    await tx.delete(services).where(eq(services.id, id));
+    return lockedService;
   });
 
   revalidateMutation([service.slug], articleSlugs);
+  await withTimeout(deleteCloudinaryImage(service.imagePublicId), 2_000).catch(
+    (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn("cloudinary delete failed:", message);
+    },
+  );
 }

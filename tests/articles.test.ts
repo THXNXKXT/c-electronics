@@ -177,6 +177,8 @@ test("rejects executable URLs and unsupported rich-text nodes", async () => {
     await loadArticlesModule();
 
   assert.equal(sanitizeArticleUrl("/booking", "link"), "/booking");
+  assert.equal(sanitizeArticleUrl("/images/service.jpg", "image"), "/images/service.jpg");
+  assert.equal(sanitizeArticleUrl("/\\evil.example/pixel.png", "image"), undefined);
   assert.equal(
     sanitizeArticleUrl("https://res.cloudinary.com/demo/image.jpg", "image"),
     "https://res.cloudinary.com/demo/image.jpg",
@@ -216,6 +218,10 @@ test("rejects executable URLs and unsupported rich-text nodes", async () => {
         },
       ],
     }),
+    false,
+  );
+  assert.equal(
+    isValidArticleDocument({ type: "doc", content: [null] }),
     false,
   );
 });

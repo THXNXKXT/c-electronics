@@ -1,4 +1,9 @@
-import { sanitizeCanonical, SITE_URL, type ArticleDocument } from "./articles";
+import {
+  sanitizeCanonical,
+  SITE_URL,
+  textFromArticleNode,
+  type ArticleDocument,
+} from "./articles";
 
 export type ServiceStatus = "draft" | "published";
 
@@ -51,6 +56,35 @@ export function isIndexableService(input: {
   noIndex: boolean;
 }): boolean {
   return input.status === "published" && !input.archived && !input.noIndex;
+}
+
+export function assertServiceReadyForPublication(input: {
+  content: ArticleDocument;
+  description: string | null;
+  processSteps: ServiceProcessStep[];
+  image: string | null;
+  imageAlt: string | null;
+}): void {
+  const bodyText = (input.content.content ?? [])
+    .map(textFromArticleNode)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (bodyText.length < 600) {
+    throw new Error(
+      "เนื้อหายังสั้นเกินไปสำหรับเผยแพร่ (อย่างน้อย 600 ตัวอักษร)",
+    );
+  }
+  if (!input.description?.trim()) {
+    throw new Error("กรุณาระบุคำอธิบายบริการก่อนเผยแพร่");
+  }
+  if (input.processSteps.length === 0) {
+    throw new Error("กรุณาระบุขั้นตอนบริการอย่างน้อย 1 ขั้นตอนก่อนเผยแพร่");
+  }
+  if (input.image && !input.imageAlt?.trim()) {
+    throw new Error("กรุณาใส่ alt text ของรูปบริการก่อนเผยแพร่");
+  }
 }
 
 function clipDescription(value: string, maxLength = 160): string {
