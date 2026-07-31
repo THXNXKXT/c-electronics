@@ -10,6 +10,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import type { ArticleDocument } from "@/lib/articles";
+import type { ServiceFaq, ServiceProcessStep } from "@/lib/services";
 
 // ===== Better-Auth required tables =====
 export const users = pgTable("users", {
@@ -77,19 +78,56 @@ export const products = pgTable("products", {
   updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const services = pgTable("services", {
-  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
-  description: text("description"),
-  price: text("price"),
-  icon: text("icon").notNull().default("Wrench"),
-  image: text("image"),
-  features: text("features"),
-  archived: boolean("archived").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
-});
+export const serviceStatus = pgEnum("service_status", ["draft", "published"]);
+
+export const services = pgTable(
+  "services",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    description: text("description"),
+    price: text("price"),
+    icon: text("icon").notNull().default("Wrench"),
+    image: text("image"),
+    features: text("features"),
+    content: jsonb("content").$type<ArticleDocument>().notNull().default({
+      type: "doc", content: [{ type: "paragraph", content: [] }],
+    }),
+    processSteps: jsonb("process_steps").$type<ServiceProcessStep[]>().notNull().default([]),
+    faqs: jsonb("faqs").$type<ServiceFaq[]>().notNull().default([]),
+    imageAlt: text("image_alt"),
+    imagePublicId: text("image_public_id"),
+    status: serviceStatus("status").notNull().default("draft"),
+    featured: boolean("featured").notNull().default(false),
+    seoTitle: text("seo_title"),
+    seoDescription: text("seo_description"),
+    canonicalUrl: text("canonical_url"),
+    noIndex: boolean("no_index").notNull().default(false),
+    archived: boolean("archived").notNull().default(false),
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("services_publication_idx").on(
+      table.status,
+      table.archived,
+      table.publishedAt,
+    ),
+  ],
+);
+
+export const serviceSlugRedirects = pgTable(
+  "service_slug_redirects",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    serviceId: text("service_id").notNull().references(() => services.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull().unique(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("service_slug_redirects_service_idx").on(table.serviceId)],
+);
 
 export const articleStatus = pgEnum("article_status", ["draft", "published"]);
 
