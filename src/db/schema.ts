@@ -1,4 +1,15 @@
-import { pgTable, text, integer, timestamp, boolean, primaryKey } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
+import type { ArticleDocument } from "@/lib/articles";
 
 // ===== Better-Auth required tables =====
 export const users = pgTable("users", {
@@ -79,6 +90,67 @@ export const services = pgTable("services", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
+
+export const articleStatus = pgEnum("article_status", ["draft", "published"]);
+
+export const articles = pgTable(
+  "articles",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    title: text("title").notNull(),
+    slug: text("slug").notNull().unique(),
+    excerpt: text("excerpt").notNull(),
+    content: jsonb("content").$type<ArticleDocument>().notNull(),
+    category: text("category").notNull(),
+    tags: text("tags").array().notNull().default([]),
+    coverImage: text("cover_image"),
+    coverImageAlt: text("cover_image_alt"),
+    coverPublicId: text("cover_public_id"),
+    relatedServiceId: text("related_service_id").references(() => services.id, {
+      onDelete: "set null",
+    }),
+    status: articleStatus("status").notNull().default("draft"),
+    featured: boolean("featured").notNull().default(false),
+    seoTitle: text("seo_title"),
+    seoDescription: text("seo_description"),
+    canonicalUrl: text("canonical_url"),
+    noIndex: boolean("no_index").notNull().default(false),
+    archived: boolean("archived").notNull().default(false),
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("articles_publication_idx").on(
+      table.status,
+      table.archived,
+      table.publishedAt,
+    ),
+    index("articles_category_idx").on(table.category),
+  ],
+);
+
+export const articleProducts = pgTable(
+  "article_products",
+  {
+    articleId: text("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({
+      name: "article_products_article_id_product_id_pk",
+      columns: [table.articleId, table.productId],
+    }),
+    index("article_products_product_idx").on(table.productId),
+  ],
+);
 
 // ponytail: single-row settings table — contact info editable from admin
 export const settings = pgTable("settings", {

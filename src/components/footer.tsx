@@ -5,6 +5,7 @@ import { MapPin, Phone, MessageCircle, Clock } from "lucide-react";
 const services = ["ติดตั้งแอร์", "กล้องวงจรปิด", "ระบบไฟฟ้า", "จานดาวเทียม"];
 const menu = [
   { label: "สินค้า", href: "/products" },
+  { label: "บทความ", href: "/articles" },
   { label: "จองบริการ", href: "/booking" },
   { label: "เกี่ยวกับเรา", href: "/about" },
   { label: "ติดต่อ", href: "/contact" },

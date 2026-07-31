@@ -34,12 +34,23 @@ type Product = {
   image: string | null;
 };
 
+type Article = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  category: string;
+  coverImage: string | null;
+  coverImageAlt: string | null;
+  publishedAt: Date | null;
+};
+
 function getIcon(name: string | null): LucideIcon {
   if (!name) return Icons.Wrench;
   return (Icons as unknown as Record<string, LucideIcon>)[name] ?? Icons.Wrench;
 }
 
-export function HomeClient({ services, products }: { services: Service[]; products: Product[] }) {
+export function HomeClient({ services, products, articles }: { services: Service[]; products: Product[]; articles: Article[] }) {
   return (
     <>
       {/* ===== HERO ===== */}
@@ -144,6 +155,49 @@ export function HomeClient({ services, products }: { services: Service[]; produc
           </div>
         </div>
       </section>
+
+      {/* ===== ARTICLES ===== */}
+      {articles.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+          <motion.div {...reveal} className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary sm:text-sm">บทความล่าสุด</p>
+              <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">ความรู้ที่ช่วยให้ดูแลบ้านได้มั่นใจขึ้น</h2>
+            </div>
+            <Link href="/articles" className="hidden items-center gap-2 text-sm font-semibold text-primary sm:inline-flex">
+              ดูทั้งหมด <ArrowRight className="size-4" />
+            </Link>
+          </motion.div>
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {articles.map((article, index) => (
+              <motion.article
+                key={article.id}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ margin: "0px 0px 300px 0px" }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
+                className="group overflow-hidden rounded-[20px] border border-black/5 bg-white"
+              >
+                <Link href={`/articles/${article.slug}`} className="block">
+                  <div className="aspect-[3/2] overflow-hidden bg-surface-tint">
+                    {article.coverImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={article.coverImage} alt={article.coverImageAlt || article.title} className="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    ) : (
+                      <div className="flex size-full items-center justify-center"><Icons.BookOpen className="size-10 text-primary" strokeWidth={1.5} /></div>
+                    )}
+                  </div>
+                  <div className="p-5">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-primary">{article.category}</p>
+                    <h3 className="mt-2 text-lg font-bold leading-snug">{article.title}</h3>
+                    <p className="mt-2 line-clamp-2 text-sm text-muted">{article.excerpt}</p>
+                  </div>
+                </Link>
+              </motion.article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ===== BOOKING CTA ===== */}
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">

@@ -9,7 +9,7 @@ export function ImageUpload({
   folder = "c-electronics",
 }: {
   value: string;
-  onChange: (url: string) => void;
+  onChange: (url: string, publicId?: string) => void;
   folder?: string;
 }) {
   const [uploading, setUploading] = useState(false);
@@ -45,7 +45,7 @@ export function ImageUpload({
 
       // ponytail: f_auto (WebP/AVIF by browser) + q_auto (auto quality)
       const optimized = data.secure_url.replace("/upload/", "/upload/f_auto,q_auto/");
-      onChange(optimized);
+      onChange(optimized, data.public_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "อัพโหลดไม่สำเร็จ");
     } finally {
@@ -62,7 +62,7 @@ export function ImageUpload({
             <img src={value} alt="preview" className="size-16 rounded-xl border border-black/10 object-cover" />
             <button
               type="button"
-              onClick={() => onChange("")}
+              onClick={() => onChange("", "")}
               className="absolute -right-1 -top-1 rounded-full bg-negative p-0.5 text-white"
             >
               <X className="size-3" />

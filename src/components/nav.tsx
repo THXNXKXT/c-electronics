@@ -9,6 +9,7 @@ import { Phone, Menu, X } from "lucide-react";
 const navLinks = [
   { label: "สินค้า", href: "/products" },
   { label: "บริการ", href: "/services" },
+  { label: "บทความ", href: "/articles" },
   { label: "จองบริการ", href: "/booking" },
   { label: "เกี่ยวกับเรา", href: "/about" },
   { label: "ติดต่อ", href: "/contact" },
@@ -31,7 +32,8 @@ export function Nav({ phone }: { phone: string }) {
 
         <ul className="hidden items-center gap-8 md:flex">
           {navLinks.map((item) => {
-            const active = pathname === item.href;
+            const active =
+              pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <li key={item.href} className="relative">
                 <Link href={item.href} className={`whitespace-nowrap text-sm font-semibold transition-colors hover:text-ink ${active ? "text-ink" : "text-muted"}`}>
@@ -59,7 +61,8 @@ export function Nav({ phone }: { phone: string }) {
       <div className={`overflow-hidden border-b border-black/5 bg-white md:hidden ${open ? "max-h-[80vh] opacity-100" : "max-h-0 opacity-0"}`} style={{ transition: "max-height 200ms ease, opacity 200ms ease" }}>
         <ul className="mx-auto max-w-6xl px-4 py-2 sm:px-6">
           {navLinks.map((item) => {
-            const active = pathname === item.href;
+            const active =
+              pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <li key={item.href}>
                 <Link href={item.href} onClick={() => setOpen(false)} className={`flex min-h-11 items-center rounded-lg px-3 text-sm font-medium transition-colors ${active ? "bg-primary-tint text-primary" : "text-muted hover:bg-black/5 hover:text-ink"}`}>
