@@ -21,7 +21,7 @@ import {
   Undo2,
   Unlink,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type ToolbarButtonProps = {
   label: string;
@@ -59,15 +59,18 @@ function ToolbarButton({
 export function ArticleRichTextEditor({
   value,
   onChange,
+  disabled = false,
 }: {
   value: ArticleDocument;
   onChange: (value: ArticleDocument) => void;
+  disabled?: boolean;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const editor = useEditor({
     immediatelyRender: false,
+    editable: !disabled,
     extensions: [
       StarterKit.configure({
         codeBlock: false,
@@ -101,6 +104,10 @@ export function ArticleRichTextEditor({
       },
     },
   });
+
+  useEffect(() => {
+    editor?.setEditable(!disabled);
+  }, [disabled, editor]);
 
   if (!editor) {
     return (
@@ -179,7 +186,12 @@ export function ArticleRichTextEditor({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-black/10 bg-white focus-within:border-primary">
+    <div
+      aria-disabled={disabled}
+      inert={disabled}
+      className="overflow-hidden rounded-2xl border border-black/10 bg-white focus-within:border-primary aria-disabled:opacity-70"
+    >
+      <fieldset disabled={disabled} className="contents">
       <div className="flex flex-wrap items-center gap-1 border-b border-black/5 bg-canvas-muted/70 p-2">
         <ToolbarButton
           label="ย้อนกลับ"
@@ -300,6 +312,7 @@ export function ArticleRichTextEditor({
         </p>
       )}
       <EditorContent editor={editor} />
+      </fieldset>
     </div>
   );
 }

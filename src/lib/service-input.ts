@@ -10,6 +10,7 @@ import {
   type ServiceFaq,
   type ServiceProcessStep,
 } from "./services";
+import { ServiceUserFacingError } from "./service-action-result";
 
 export type ServiceInput = {
   name: string;
@@ -50,20 +51,20 @@ export function deriveServiceImagePublicId(imageUrl: string): string | null {
   try {
     imageCloudName = decodeURIComponent(segments[0] ?? "");
   } catch {
-    throw new Error("รูป Cloudinary ของบริการไม่ถูกต้อง");
+    throw new ServiceUserFacingError("รูป Cloudinary ของบริการไม่ถูกต้อง");
   }
   if (
     !configuredCloudName ||
     uploadIndex !== 2 ||
     imageCloudName !== configuredCloudName
   ) {
-    throw new Error("รูป Cloudinary ต้องเป็นของบัญชีเว็บไซต์นี้เท่านั้น");
+    throw new ServiceUserFacingError("รูป Cloudinary ต้องเป็นของบัญชีเว็บไซต์นี้เท่านั้น");
   }
   const versionIndex = segments.findIndex(
     (segment, index) => index > uploadIndex && /^v\d+$/.test(segment),
   );
   if (uploadIndex < 1 || versionIndex < 0) {
-    throw new Error("รูป Cloudinary ของบริการไม่ถูกต้อง");
+    throw new ServiceUserFacingError("รูป Cloudinary ของบริการไม่ถูกต้อง");
   }
 
   const encodedAssetPath = segments.slice(versionIndex + 1).join("/");
@@ -71,7 +72,7 @@ export function deriveServiceImagePublicId(imageUrl: string): string | null {
   try {
     assetPath = decodeURIComponent(encodedAssetPath);
   } catch {
-    throw new Error("รูป Cloudinary ของบริการไม่ถูกต้อง");
+    throw new ServiceUserFacingError("รูป Cloudinary ของบริการไม่ถูกต้อง");
   }
   const extensionIndex = assetPath.lastIndexOf(".");
   const publicId = extensionIndex > 0
@@ -83,7 +84,7 @@ export function deriveServiceImagePublicId(imageUrl: string): string | null {
     publicId.includes("\\") ||
     publicId.split("/").includes("..")
   ) {
-    throw new Error(
+    throw new ServiceUserFacingError(
       "รูป Cloudinary ต้องอยู่ในโฟลเดอร์ c-electronics/services",
     );
   }
@@ -94,32 +95,32 @@ function parseJson(formData: FormData, key: string, label: string): unknown {
   try {
     return JSON.parse(String(formData.get(key) ?? ""));
   } catch {
-    throw new Error(`รูปแบบ${label}ไม่ถูกต้อง`);
+    throw new ServiceUserFacingError(`รูปแบบ${label}ไม่ถูกต้อง`);
   }
 }
 
 function parseProcessSteps(formData: FormData): ServiceProcessStep[] {
   const value = parseJson(formData, "processSteps", "ขั้นตอนบริการ");
   if (!Array.isArray(value) || value.length > 12) {
-    throw new Error("ขั้นตอนบริการต้องมีไม่เกิน 12 ขั้นตอน");
+    throw new ServiceUserFacingError("ขั้นตอนบริการต้องมีไม่เกิน 12 ขั้นตอน");
   }
 
   return value.map((step) => {
     if (!step || typeof step !== "object") {
-      throw new Error("ข้อมูลขั้นตอนบริการไม่ถูกต้อง");
+      throw new ServiceUserFacingError("ข้อมูลขั้นตอนบริการไม่ถูกต้อง");
     }
     const rawTitle = (step as Record<string, unknown>).title;
     const rawDescription = (step as Record<string, unknown>).description;
     if (typeof rawTitle !== "string" || typeof rawDescription !== "string") {
-      throw new Error("ข้อมูลขั้นตอนบริการต้องเป็นข้อความ");
+      throw new ServiceUserFacingError("ข้อมูลขั้นตอนบริการต้องเป็นข้อความ");
     }
     const title = rawTitle.trim();
     const description = rawDescription.trim();
     if (!title || title.length > 180) {
-      throw new Error("ชื่อขั้นตอนต้องมีไม่เกิน 180 ตัวอักษร");
+      throw new ServiceUserFacingError("ชื่อขั้นตอนต้องมีไม่เกิน 180 ตัวอักษร");
     }
     if (!description || description.length > 1_000) {
-      throw new Error("คำอธิบายขั้นตอนต้องมีไม่เกิน 1,000 ตัวอักษร");
+      throw new ServiceUserFacingError("คำอธิบายขั้นตอนต้องมีไม่เกิน 1,000 ตัวอักษร");
     }
     return { title, description };
   });
@@ -128,25 +129,25 @@ function parseProcessSteps(formData: FormData): ServiceProcessStep[] {
 function parseFaqs(formData: FormData): ServiceFaq[] {
   const value = parseJson(formData, "faqs", " FAQ");
   if (!Array.isArray(value) || value.length > 20) {
-    throw new Error("FAQ ต้องมีไม่เกิน 20 รายการ");
+    throw new ServiceUserFacingError("FAQ ต้องมีไม่เกิน 20 รายการ");
   }
 
   return value.map((faq) => {
     if (!faq || typeof faq !== "object") {
-      throw new Error("ข้อมูล FAQ ไม่ถูกต้อง");
+      throw new ServiceUserFacingError("ข้อมูล FAQ ไม่ถูกต้อง");
     }
     const rawQuestion = (faq as Record<string, unknown>).question;
     const rawAnswer = (faq as Record<string, unknown>).answer;
     if (typeof rawQuestion !== "string" || typeof rawAnswer !== "string") {
-      throw new Error("ข้อมูล FAQ ต้องเป็นข้อความ");
+      throw new ServiceUserFacingError("ข้อมูล FAQ ต้องเป็นข้อความ");
     }
     const question = rawQuestion.trim();
     const answer = rawAnswer.trim();
     if (!question || question.length > 180) {
-      throw new Error("คำถาม FAQ ต้องมีไม่เกิน 180 ตัวอักษร");
+      throw new ServiceUserFacingError("คำถาม FAQ ต้องมีไม่เกิน 180 ตัวอักษร");
     }
     if (!answer || answer.length > 1_000) {
-      throw new Error("คำตอบ FAQ ต้องมีไม่เกิน 1,000 ตัวอักษร");
+      throw new ServiceUserFacingError("คำตอบ FAQ ต้องมีไม่เกิน 1,000 ตัวอักษร");
     }
     return { question, answer };
   });
@@ -161,25 +162,25 @@ export function parseServiceInput(formData: FormData): ServiceInput {
   const imageInput = optionalText(formData, "image");
 
   if (name.length < 3 || name.length > 120) {
-    throw new Error("ชื่อบริการต้องมี 3–120 ตัวอักษร");
+    throw new ServiceUserFacingError("ชื่อบริการต้องมี 3–120 ตัวอักษร");
   }
   if (description.length < 20 || description.length > 500) {
-    throw new Error("คำอธิบายต้องมี 20–500 ตัวอักษร");
+    throw new ServiceUserFacingError("คำอธิบายต้องมี 20–500 ตัวอักษร");
   }
 
   const slug = slugifyServiceName(requestedSlug || name);
-  if (!slug) throw new Error("กรุณาระบุ slug บริการ");
+  if (!slug) throw new ServiceUserFacingError("กรุณาระบุ slug บริการ");
 
   if (!isValidArticleDocument(rawContent)) {
-    throw new Error("เนื้อหามี node, link หรือรูปภาพที่ระบบไม่รองรับ");
+    throw new ServiceUserFacingError("เนื้อหามี node, link หรือรูปภาพที่ระบบไม่รองรับ");
   }
   if (canonicalInput && !sanitizeCanonical(canonicalInput)) {
-    throw new Error(
+    throw new ServiceUserFacingError(
       "Canonical ต้องเป็น path หรือ URL ของเว็บไซต์นี้เท่านั้น",
     );
   }
   if (imageInput && !sanitizeArticleUrl(imageInput, "image")) {
-    throw new Error("รูปบริการต้องมาจาก Cloudinary หรือเว็บไซต์นี้");
+    throw new ServiceUserFacingError("รูปบริการต้องมาจาก Cloudinary หรือเว็บไซต์นี้");
   }
   const image = imageInput
     ? sanitizeArticleUrl(imageInput, "image") ?? null
@@ -191,7 +192,7 @@ export function parseServiceInput(formData: FormData): ServiceInput {
     .map((item) => item.trim())
     .filter(Boolean);
   if (highlights.length > 12) {
-    throw new Error("จุดเด่นบริการต้องมีไม่เกิน 12 รายการ");
+    throw new ServiceUserFacingError("จุดเด่นบริการต้องมีไม่เกิน 12 รายการ");
   }
 
   return {

@@ -90,7 +90,11 @@ function ServiceTable({ rows }: { rows: AdminServiceRow[] }) {
                 <th className="px-4 py-3 font-semibold">สถานะ</th>
                 <th className="px-4 py-3 font-semibold">ราคา</th>
                 <th className="px-4 py-3 font-semibold">แก้ไขล่าสุด</th>
-                <th className="px-4 py-3" />
+                <th
+                  scope="col"
+                  aria-label="การดำเนินการ"
+                  className="px-4 py-3"
+                />
               </tr>
             </thead>
             <tbody>

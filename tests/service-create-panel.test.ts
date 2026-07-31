@@ -4,6 +4,24 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
+const completeFields = [
+  "name",
+  "slug",
+  "description",
+  "price",
+  "icon",
+  "features",
+  "content",
+  "processSteps",
+  "faqs",
+  "imageAlt",
+  "featured",
+  "seoTitle",
+  "seoDescription",
+  "canonicalUrl",
+  "noIndex",
+];
+
 test("service create dropdown contains the same complete editor fields", async () => {
   process.env.DATABASE_URL ??= "postgresql://test:test@localhost/test";
   const { ServiceCreatePanel } = await import(
@@ -17,23 +35,7 @@ test("service create dropdown contains the same complete editor fields", async (
     ),
   );
 
-  for (const field of [
-    "name",
-    "slug",
-    "description",
-    "price",
-    "icon",
-    "features",
-    "content",
-    "processSteps",
-    "faqs",
-    "imageAlt",
-    "featured",
-    "seoTitle",
-    "seoDescription",
-    "canonicalUrl",
-    "noIndex",
-  ]) {
+  for (const field of completeFields) {
     assert.match(
       markup,
       new RegExp(`name=["']${field}["']`),
@@ -88,4 +90,11 @@ test("service edit form keeps one editable row for every structured list", async
   assert.match(markup, /aria-label="จุดเด่นที่ 1"/);
   assert.match(markup, /aria-label="ชื่อขั้นตอนที่ 1"/);
   assert.match(markup, /aria-label="คำถาม FAQ ที่ 1"/);
+  for (const field of completeFields) {
+    assert.match(
+      markup,
+      new RegExp(`name=["']${field}["']`),
+      `edit form missing ${field}`,
+    );
+  }
 });

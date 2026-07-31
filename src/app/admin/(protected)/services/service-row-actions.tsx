@@ -5,7 +5,11 @@ import {
   getServiceConfirmation,
   type ServiceConfirmationAction,
 } from "@/lib/service-confirmations";
-import { canDeleteServicePermanently } from "@/lib/services";
+import { getServiceRowActionAvailability } from "@/lib/service-admin-ui";
+import {
+  unwrapServiceActionResult,
+  type ServiceActionResult,
+} from "@/lib/service-action-result";
 import {
   Archive,
   ArchiveRestore,
@@ -44,12 +48,13 @@ export function ServiceRowActions({
   const confirmationContent = confirmation
     ? getServiceConfirmation(confirmation, service.name)
     : null;
+  const availableActions = getServiceRowActionAvailability(service);
 
-  function run(action: () => Promise<void>) {
+  function run(action: () => Promise<ServiceActionResult>) {
     setError("");
     startTransition(async () => {
       try {
-        await action();
+        unwrapServiceActionResult(await action());
         router.refresh();
       } catch (caught) {
         setError(
@@ -103,21 +108,19 @@ export function ServiceRowActions({
         >
           <ExternalLink className="size-4" />
         </Link>
-        {!service.archived && (
+        {availableActions.publication && (
           <button
             type="button"
             disabled={pending}
             aria-label={
-              service.status === "published" ? "ยกเลิกเผยแพร่" : "เผยแพร่"
+              `${availableActions.publication === "unpublish" ? "ยกเลิกเผยแพร่" : "เผยแพร่"} ${service.name}`
             }
             onClick={() =>
-              setConfirmation(
-                service.status === "published" ? "unpublish" : "publish",
-              )
+              setConfirmation(availableActions.publication ?? "publish")
             }
             className="rounded-lg p-2 text-subtle outline-none hover:bg-positive/5 hover:text-positive focus-visible:ring-2 focus-visible:ring-positive disabled:opacity-40"
           >
-            {service.status === "published" ? (
+            {availableActions.publication === "unpublish" ? (
               <Undo2 className="size-4" />
             ) : (
               <Send className="size-4" />
@@ -127,23 +130,21 @@ export function ServiceRowActions({
         <button
           type="button"
           disabled={pending}
-          aria-label={service.archived ? "นำกลับมา" : "เก็บถาวร"}
-          onClick={() =>
-            setConfirmation(service.archived ? "restore" : "archive")
-          }
+          aria-label={`${availableActions.archive === "restore" ? "นำกลับมา" : "เก็บถาวร"} ${service.name}`}
+          onClick={() => setConfirmation(availableActions.archive)}
           className="rounded-lg p-2 text-subtle outline-none hover:bg-warning/5 hover:text-warning focus-visible:ring-2 focus-visible:ring-warning disabled:opacity-40"
         >
-          {service.archived ? (
+          {availableActions.archive === "restore" ? (
             <ArchiveRestore className="size-4" />
           ) : (
             <Archive className="size-4" />
           )}
         </button>
-        {canDeleteServicePermanently(service) && (
+        {availableActions.canDelete && (
           <button
             type="button"
             disabled={pending}
-            aria-label="ลบร่าง"
+            aria-label={`ลบร่าง ${service.name}`}
             onClick={() => setConfirmation("delete")}
             className="rounded-lg p-2 text-subtle outline-none hover:bg-negative/5 hover:text-negative focus-visible:ring-2 focus-visible:ring-negative disabled:opacity-40"
           >

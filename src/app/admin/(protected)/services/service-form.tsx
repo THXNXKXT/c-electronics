@@ -9,6 +9,12 @@ import {
   type ServiceConfirmationAction,
 } from "@/lib/service-confirmations";
 import {
+  isServiceFormBusy,
+  isServicePublicationBlocked,
+  serializeServiceEditorState,
+} from "@/lib/service-admin-ui";
+import { unwrapServiceActionResult } from "@/lib/service-action-result";
+import {
   slugifyServiceName,
   type ServiceFaq,
   type ServiceProcessStep,
@@ -57,16 +63,6 @@ export type EditableService = typeof services.$inferSelect;
 const fieldClass =
   "w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/10";
 
-function filledProcessSteps(steps: ServiceProcessStep[]) {
-  return steps.filter(
-    (step) => step.title.trim() || step.description.trim(),
-  );
-}
-
-function filledFaqs(faqs: ServiceFaq[]) {
-  return faqs.filter((faq) => faq.question.trim() || faq.answer.trim());
-}
-
 export function ServiceForm({
   service,
   embedded = false,
@@ -101,9 +97,16 @@ export function ServiceForm({
   );
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
+  const [dirty, setDirty] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [confirmation, setConfirmation] =
     useState<ServiceConfirmationAction | null>(null);
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
+
+  function markDirty() {
+    setDirty(true);
+    setSaved("");
+  }
 
   function runAction(action: () => Promise<void>) {
     setError("");
@@ -121,27 +124,29 @@ export function ServiceForm({
 
   function buildFormData(form: HTMLFormElement) {
     const formData = new FormData(form);
-    formData.set("content", JSON.stringify(content));
-    formData.set("image", image);
-    formData.set("imagePublicId", imagePublicId);
-    formData.set(
-      "features",
-      features.map((feature) => feature.trim()).filter(Boolean).join("|"),
-    );
-    formData.set(
-      "processSteps",
-      JSON.stringify(filledProcessSteps(processSteps)),
-    );
-    formData.set("faqs", JSON.stringify(filledFaqs(faqs)));
+    const structuredFields = serializeServiceEditorState({
+      content,
+      image,
+      imagePublicId,
+      features,
+      processSteps,
+      faqs,
+    });
+    for (const [key, value] of Object.entries(structuredFields)) {
+      formData.set(key, value);
+    }
     return formData;
   }
 
   function save(formData: FormData) {
     runAction(async () => {
-      const result = service
-        ? await updateServiceAction(service.id, formData)
-        : await createServiceAction(formData);
+      const result = unwrapServiceActionResult(
+        service
+          ? await updateServiceAction(service.id, formData)
+          : await createServiceAction(formData),
+      );
       setSaved("บันทึกแล้ว");
+      setDirty(false);
 
       if (!service) {
         router.replace(`/admin/services/${result.id}/edit`);
@@ -153,6 +158,7 @@ export function ServiceForm({
 
   function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isServiceFormBusy(pending, imageUploading)) return;
     const formData = buildFormData(event.currentTarget);
     const nextSlug = slugifyServiceName(String(formData.get("slug") ?? ""));
 
@@ -182,21 +188,42 @@ export function ServiceForm({
 
     runAction(async () => {
       if (action === "publish" || action === "unpublish") {
-        await setServicePublicationAction(service.id, action === "publish");
+        unwrapServiceActionResult(
+          await setServicePublicationAction(service.id, action === "publish"),
+        );
       } else if (action === "archive" || action === "restore") {
-        await setServiceArchivedAction(service.id, action === "archive");
+        unwrapServiceActionResult(
+          await setServiceArchivedAction(service.id, action === "archive"),
+        );
       }
       router.refresh();
     });
   }
 
+  const busy = isServiceFormBusy(pending, imageUploading);
+  const publicationAction =
+    service?.status === "published" ? "unpublish" : "publish";
+  const publicationBlocked = isServicePublicationBlocked(
+    publicationAction,
+    dirty,
+    busy,
+  );
+  const serializedState = serializeServiceEditorState({
+    content,
+    image,
+    imagePublicId,
+    features,
+    processSteps,
+    faqs,
+  });
   const confirmationContent =
     service && confirmation
       ? getServiceConfirmation(confirmation, service.name)
       : null;
 
   return (
-    <form onSubmit={handleSave}>
+    <form onSubmit={handleSave} onChange={markDirty}>
+      <fieldset disabled={pending} className="contents">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           {!embedded && (
@@ -218,16 +245,23 @@ export function ServiceForm({
             </p>
           )}
           {service && (
-            <p className="mt-1 text-sm text-muted">
-              สถานะ:{" "}
-              <span className="font-semibold text-ink">
-                {service.archived
-                  ? "เก็บถาวร"
-                  : service.status === "published"
-                    ? "เผยแพร่แล้ว"
-                    : "ฉบับร่าง"}
-              </span>
-            </p>
+            <>
+              <p className="mt-1 text-sm text-muted">
+                สถานะ:{" "}
+                <span className="font-semibold text-ink">
+                  {service.archived
+                    ? "เก็บถาวร"
+                    : service.status === "published"
+                      ? "เผยแพร่แล้ว"
+                      : "ฉบับร่าง"}
+                </span>
+              </p>
+              {dirty && (
+                <p role="status" className="mt-1 text-xs font-semibold text-warning">
+                  มีการแก้ไขที่ยังไม่ได้บันทึก
+                </p>
+              )}
+            </>
           )}
         </div>
 
@@ -243,26 +277,29 @@ export function ServiceForm({
               </Link>
               <button
                 type="button"
-                disabled={pending || service.archived}
+                disabled={publicationBlocked || service.archived}
+                title={
+                  publicationAction === "publish" && dirty
+                    ? "บันทึกการแก้ไขก่อนเผยแพร่"
+                    : undefined
+                }
                 onClick={() =>
-                  setConfirmation(
-                    service.status === "published" ? "unpublish" : "publish",
-                  )
+                  setConfirmation(publicationAction)
                 }
                 className="flex items-center gap-2 rounded-full border border-primary px-4 py-2.5 text-sm font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"
               >
-                {service.status === "published" ? (
+                {publicationAction === "unpublish" ? (
                   <Undo2 className="size-4" />
                 ) : (
                   <Send className="size-4" />
                 )}
-                {service.status === "published"
+                {publicationAction === "unpublish"
                   ? "ยกเลิกเผยแพร่"
                   : "เผยแพร่"}
               </button>
               <button
                 type="button"
-                disabled={pending}
+                disabled={busy}
                 onClick={() =>
                   setConfirmation(service.archived ? "restore" : "archive")
                 }
@@ -279,16 +316,24 @@ export function ServiceForm({
           )}
           <button
             type="submit"
-            disabled={pending}
+            disabled={busy}
             className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white outline-none hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50"
           >
-            {pending ? (
+            {busy ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <Save className="size-4" />
             )}
             บันทึกร่าง
           </button>
+          {imageUploading && (
+            <span
+              role="status"
+              className="self-center text-xs font-semibold text-primary"
+            >
+              กำลังอัปโหลดรูป...
+            </span>
+          )}
         </div>
       </div>
 
@@ -377,11 +422,18 @@ export function ServiceForm({
                 ใช้ H2/H3 เพื่อจัดลำดับเนื้อหาและสร้างสารบัญอัตโนมัติ
               </p>
             </div>
-            <ArticleRichTextEditor value={content} onChange={setContent} />
+            <ArticleRichTextEditor
+              value={content}
+              disabled={pending}
+              onChange={(nextContent) => {
+                setContent(nextContent);
+                markDirty();
+              }}
+            />
             <input
               type="hidden"
               name="content"
-              value={JSON.stringify(content)}
+              value={serializedState.content}
               readOnly
             />
           </section>
@@ -397,12 +449,13 @@ export function ServiceForm({
               <button
                 type="button"
                 disabled={processSteps.length >= 12}
-                onClick={() =>
+                onClick={() => {
+                  markDirty();
                   setProcessSteps((current) => [
                     ...current,
                     { ...EMPTY_PROCESS_STEP },
-                  ])
-                }
+                  ]);
+                }}
                 className="inline-flex shrink-0 items-center gap-1 rounded-full border border-black/10 px-3 py-2 text-xs font-semibold outline-none hover:border-primary hover:text-primary focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"
               >
                 <Plus className="size-3.5" /> เพิ่มขั้นตอน
@@ -422,11 +475,14 @@ export function ServiceForm({
                       <button
                         type="button"
                         aria-label={`ลบขั้นตอนที่ ${index + 1}`}
-                        onClick={() =>
+                        onClick={() => {
+                          markDirty();
                           setProcessSteps((current) =>
-                            current.filter((_, itemIndex) => itemIndex !== index),
-                          )
-                        }
+                            current.filter(
+                              (_, itemIndex) => itemIndex !== index,
+                            ),
+                          );
+                        }}
                         className="rounded-lg p-2 text-subtle outline-none hover:bg-negative/5 hover:text-negative focus-visible:ring-2 focus-visible:ring-negative"
                       >
                         <Trash2 className="size-4" />
@@ -472,7 +528,7 @@ export function ServiceForm({
             <input
               type="hidden"
               name="processSteps"
-              value={JSON.stringify(filledProcessSteps(processSteps))}
+              value={serializedState.processSteps}
               readOnly
             />
           </section>
@@ -486,9 +542,10 @@ export function ServiceForm({
               <button
                 type="button"
                 disabled={faqs.length >= 20}
-                onClick={() =>
-                  setFaqs((current) => [...current, { ...EMPTY_FAQ }])
-                }
+                onClick={() => {
+                  markDirty();
+                  setFaqs((current) => [...current, { ...EMPTY_FAQ }]);
+                }}
                 className="inline-flex shrink-0 items-center gap-1 rounded-full border border-black/10 px-3 py-2 text-xs font-semibold outline-none hover:border-primary hover:text-primary focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"
               >
                 <Plus className="size-3.5" /> เพิ่ม FAQ
@@ -508,11 +565,14 @@ export function ServiceForm({
                       <button
                         type="button"
                         aria-label={`ลบ FAQ ที่ ${index + 1}`}
-                        onClick={() =>
+                        onClick={() => {
+                          markDirty();
                           setFaqs((current) =>
-                            current.filter((_, itemIndex) => itemIndex !== index),
-                          )
-                        }
+                            current.filter(
+                              (_, itemIndex) => itemIndex !== index,
+                            ),
+                          );
+                        }}
                         className="rounded-lg p-2 text-subtle outline-none hover:bg-negative/5 hover:text-negative focus-visible:ring-2 focus-visible:ring-negative"
                       >
                         <Trash2 className="size-4" />
@@ -558,7 +618,7 @@ export function ServiceForm({
             <input
               type="hidden"
               name="faqs"
-              value={JSON.stringify(filledFaqs(faqs))}
+              value={serializedState.faqs}
               readOnly
             />
           </section>
@@ -674,11 +734,14 @@ export function ServiceForm({
                     <button
                       type="button"
                       aria-label={`ลบจุดเด่นที่ ${index + 1}`}
-                      onClick={() =>
+                      onClick={() => {
+                        markDirty();
                         setFeatures((current) =>
-                          current.filter((_, itemIndex) => itemIndex !== index),
-                        )
-                      }
+                          current.filter(
+                            (_, itemIndex) => itemIndex !== index,
+                          ),
+                        );
+                      }}
                       className="rounded-lg p-2 text-subtle outline-none hover:bg-negative/5 hover:text-negative focus-visible:ring-2 focus-visible:ring-negative"
                     >
                       <Trash2 className="size-4" />
@@ -690,7 +753,10 @@ export function ServiceForm({
             <button
               type="button"
               disabled={features.length >= 12}
-              onClick={() => setFeatures((current) => [...current, ""])}
+              onClick={() => {
+                markDirty();
+                setFeatures((current) => [...current, ""]);
+              }}
               className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"
             >
               <Plus className="size-3.5" /> เพิ่มจุดเด่น
@@ -698,10 +764,7 @@ export function ServiceForm({
             <input
               type="hidden"
               name="features"
-              value={features
-                .map((feature) => feature.trim())
-                .filter(Boolean)
-                .join("|")}
+              value={serializedState.features}
               readOnly
             />
           </section>
@@ -714,7 +777,9 @@ export function ServiceForm({
                 onChange={(url, publicId) => {
                   setImage(url);
                   setImagePublicId(publicId ?? "");
+                  markDirty();
                 }}
+                onUploadingChange={setImageUploading}
                 folder="c-electronics/services"
               />
             </div>
@@ -737,6 +802,7 @@ export function ServiceForm({
           </section>
         </aside>
       </div>
+      </fieldset>
 
       <ConfirmModal
         open={Boolean(confirmationContent)}
@@ -744,7 +810,7 @@ export function ServiceForm({
         message={confirmationContent?.message ?? ""}
         confirmLabel={confirmationContent?.confirmLabel}
         variant={confirmationContent?.variant}
-        busy={pending}
+        busy={busy}
         onConfirm={confirmTransition}
         onCancel={() => {
           setConfirmation(null);

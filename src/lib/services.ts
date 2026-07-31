@@ -4,6 +4,7 @@ import {
   textFromArticleNode,
   type ArticleDocument,
 } from "./articles";
+import { ServiceUserFacingError } from "./service-action-result";
 
 export type ServiceStatus = "draft" | "published";
 
@@ -109,18 +110,18 @@ export function assertServiceReadyForPublication(input: {
     .trim();
 
   if (bodyText.length < 600) {
-    throw new Error(
+    throw new ServiceUserFacingError(
       "เนื้อหายังสั้นเกินไปสำหรับเผยแพร่ (อย่างน้อย 600 ตัวอักษร)",
     );
   }
   if (!input.description?.trim()) {
-    throw new Error("กรุณาระบุคำอธิบายบริการก่อนเผยแพร่");
+    throw new ServiceUserFacingError("กรุณาระบุคำอธิบายบริการก่อนเผยแพร่");
   }
   if (input.processSteps.length === 0) {
-    throw new Error("กรุณาระบุขั้นตอนบริการอย่างน้อย 1 ขั้นตอนก่อนเผยแพร่");
+    throw new ServiceUserFacingError("กรุณาระบุขั้นตอนบริการอย่างน้อย 1 ขั้นตอนก่อนเผยแพร่");
   }
   if (input.image && !input.imageAlt?.trim()) {
-    throw new Error("กรุณาใส่ alt text ของรูปบริการก่อนเผยแพร่");
+    throw new ServiceUserFacingError("กรุณาใส่ alt text ของรูปบริการก่อนเผยแพร่");
   }
 }
 

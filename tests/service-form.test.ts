@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ServiceUserFacingError } from "../src/lib/service-action-result";
 import { parseServiceInput } from "../src/lib/service-input";
 
 function validForm() {
@@ -52,6 +53,12 @@ test("parses a complete service form", () => {
   assert.equal(result.features, "สำรวจหน้างาน|ตั้งค่าดูผ่านมือถือ");
   assert.equal(result.processSteps.length, 1);
   assert.equal(result.faqs.length, 1);
+});
+
+test("parser marks validation failures as safe for action transport", () => {
+  const form = validForm();
+  form.set("name", "x");
+  assert.throws(() => parseServiceInput(form), ServiceUserFacingError);
 });
 
 test("rejects unsafe rich text and foreign canonical URLs", () => {
