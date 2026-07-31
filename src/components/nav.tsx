@@ -9,8 +9,8 @@ import { Phone, Menu, X } from "lucide-react";
 const navLinks = [
   { label: "สินค้า", href: "/products" },
   { label: "บริการ", href: "/services" },
-  { label: "บทความ", href: "/articles" },
   { label: "จองบริการ", href: "/booking" },
+  { label: "บทความ", href: "/articles" },
   { label: "เกี่ยวกับเรา", href: "/about" },
   { label: "ติดต่อ", href: "/contact" },
 ];

@@ -11,8 +11,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const navItems = [
     { label: "สินค้า", href: "/admin/products", icon: Package },
     { label: "บริการ", href: "/admin/services", icon: Wrench },
-    { label: "บทความ", href: "/admin/articles", icon: FileText },
     { label: "การจอง", href: "/admin/bookings", icon: ClipboardList },
+    { label: "บทความ", href: "/admin/articles", icon: FileText },
   { label: "ติดต่อ", href: "/admin/contact", icon: Phone },
   ];
 
