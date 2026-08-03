@@ -1,10 +1,5 @@
 @import "tailwindcss";
 
-/* Self-hosted Sukhumvit Set WOFF2 — 163KB total, all devices see same font */
-@font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-Text.woff2") format("woff2"); font-weight: 400; font-display: swap; }
-@font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-SemiBold.woff2") format("woff2"); font-weight: 600; font-display: swap; }
-@font-face { font-family: "Sukhumvit Set"; src: url("/fonts/SukhumvitSet-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
-
 /* Hallmark · macrostructure: Marquee Hero · theme: Wise-blue · tone: utilitarian */
 @theme {
   /* Layout */
@@ -37,7 +32,7 @@
   --radius-input: 12px;
 
   /* Font */
-  --font-sans: "Sukhumvit Set", "Inter", sans-serif;
+  --font-sans: var(--font-bai-jamjuree), "Tahoma", "Arial", sans-serif;
 
   /* Motion tokens */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -75,7 +70,7 @@ body {
   background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-weight: 500; /* Sukhumvit Text is thin — bump to Medium for normal body */
+  font-weight: 400;
   line-height: 1.65; /* Thai needs more air — tone marks + vowels stack */
   letter-spacing: 0.005em; /* slight breathing room prevents vowel crowding */
   -webkit-font-smoothing: antialiased;

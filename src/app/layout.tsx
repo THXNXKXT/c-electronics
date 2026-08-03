@@ -1,9 +1,18 @@
 import type { Metadata } from "next";
+import { Bai_Jamjuree } from "next/font/google";
 import { db } from "@/db";
 import { settings } from "@/db/schema";
 import "./globals.css";
 
 const SITE_URL = "https://www.c-electronics.online";
+
+const baiJamjuree = Bai_Jamjuree({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["thai", "latin"],
+  display: "swap",
+  variable: "--font-bai-jamjuree",
+  fallback: ["Tahoma", "Arial", "sans-serif"],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -99,11 +108,7 @@ export default async function RootLayout({
     ].filter(Boolean),
   };
   return (
-    <html lang="th" className="antialiased">
-      <head>
-        <link rel="preload" href="/fonts/SukhumvitSet-Text.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
-        <link rel="preload" href="/fonts/SukhumvitSet-Bold.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
-      </head>
+    <html lang="th" className={`${baiJamjuree.variable} antialiased`}>
       <body className="flex min-h-screen flex-col">
         <script
           type="application/ld+json"
